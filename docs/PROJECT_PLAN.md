@@ -652,8 +652,9 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
 - [x] Move `SimpleEmbedder` → `rag/embeddings/fake.py` `HashEmbedder` (alias kept; `embed_batch`
   added; SemanticRetriever takes an injected embedder). DONE (7 tests). Note: base.py RetrievalResult
   metadata still has a legacy implicit-Optional mypy issue, deferred to the M1 base refactor.
-- [ ] **Fix bugs 1 & part of 2/3**: MAP + AP helper in `metrics.py`; shared `Strategy` enum stub;
-  add `perf_counter` timing scaffolding in `core.py`.
+- [x] **Fix bug 1 (MAP)**: `compute_average_precision` helper in `metrics.py`; per-query MAP now uses
+  it (was NDCG@max_k); `compute_map` reuses it. DONE (4 regression tests). `Strategy` enum stub
+  (bug 2) and `perf_counter` timing (bug 3) deferred to their steps (M5 / M4).
 - [ ] `tests/` scaffold + `conftest.py`; tests locking current behavior + MAP regression.
 **Files:** `.env(.example)`, `rag/config/*`, `rag/interfaces/protocols.py`, `rag/embeddings/fake.py`,
 `evaluation/metrics.py`, `rag/core.py`, `requirements.txt`, `pyproject.toml`, `tests/*`.
@@ -856,7 +857,7 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 - [x] `requirements.txt` + `pyproject` extras + `requires-python>=3.10` + auto-discover subpackages. DONE.
 - [x] `rag/interfaces/protocols.py` (all Protocols + shared dataclasses). DONE (9 tests).
 - [x] Move `SimpleEmbedder` → `HashEmbedder` (alias kept) + inject into SemanticRetriever. DONE (7 tests).
-- [ ] Fix MAP bug + AP helper + regression test; `Strategy` enum stub; timing scaffold.
+- [x] Fix MAP bug + AP helper + regression test (4 tests). DONE. (`Strategy` enum -> M5; timing -> M4.)
 - [ ] `tests/` scaffold + behavior-lock tests.
 
 **Retrieval core (M1)**

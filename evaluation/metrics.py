@@ -8,11 +8,12 @@ import math
 @dataclass
 class MetricResult:
     """Retrieval metrics result"""
+
     precision_at_k: Dict[int, float]  # {1: 0.5, 5: 0.4, 10: 0.35}
-    mrr: float                         # Mean Reciprocal Rank
-    ndcg_at_k: Dict[int, float]       # Normalized DCG
-    map_score: float                   # Mean Average Precision
-    recall_at_k: Dict[int, float]     # {1: 0.1, 5: 0.3, 10: 0.5}
+    mrr: float  # Mean Reciprocal Rank
+    ndcg_at_k: Dict[int, float]  # Normalized DCG
+    map_score: float  # Mean Average Precision
+    recall_at_k: Dict[int, float]  # {1: 0.1, 5: 0.3, 10: 0.5}
 
     def __repr__(self):
         return (
@@ -172,13 +173,30 @@ def compute_ndcg_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) 
     return dcg / idcg
 
 
+def compute_average_precision(retrieved_ids: List[str], relevant_ids: Set[str]) -> float:
+    """
+    Average Precision for one query: mean of precision@rank at each relevant hit.
+
+    AP = sum(precision_at_rank for each relevant doc found) / |relevant|
+    """
+    if not relevant_ids:
+        return 0.0
+
+    ap = 0.0
+    num_relevant_found = 0
+    for rank, doc_id in enumerate(retrieved_ids, 1):
+        if doc_id in relevant_ids:
+            num_relevant_found += 1
+            ap += num_relevant_found / rank
+
+    return ap / len(relevant_ids)
+
+
 def compute_map(retrieved_ids_list: List[List[str]], relevant_ids_list: List[Set[str]]) -> float:
     """
-    Mean Average Precision: Average precision across multiple queries
+    Mean Average Precision: average of per-query Average Precision.
 
-    MAP = (1/Q) * sum(AP_q for each query q)
-
-    where AP_q = sum(P(k) * rel(k)) / num_relevant
+    MAP = (1/Q) * sum(AP_q for each query q with relevant docs)
 
     Args:
         retrieved_ids_list: List of retrieval results per query
@@ -187,31 +205,16 @@ def compute_map(retrieved_ids_list: List[List[str]], relevant_ids_list: List[Set
     Returns:
         MAP score 0.0-1.0
     """
-    aps = []
-
-    for retrieved_ids, relevant_ids in zip(retrieved_ids_list, relevant_ids_list):
-        if not relevant_ids:
-            continue
-
-        ap = 0.0
-        num_relevant_found = 0
-
-        for rank, doc_id in enumerate(retrieved_ids, 1):
-            if doc_id in relevant_ids:
-                num_relevant_found += 1
-                precision_at_rank = num_relevant_found / rank
-                ap += precision_at_rank
-
-        ap = ap / len(relevant_ids) if relevant_ids else 0.0
-        aps.append(ap)
-
+    aps = [
+        compute_average_precision(retrieved_ids, relevant_ids)
+        for retrieved_ids, relevant_ids in zip(retrieved_ids_list, relevant_ids_list)
+        if relevant_ids
+    ]
     return sum(aps) / len(aps) if aps else 0.0
 
 
 def compute_metrics(
-    retrieved_ids: List[str],
-    relevant_ids: Set[str],
-    k_values: List[int] = None
+    retrieved_ids: List[str], relevant_ids: Set[str], k_values: List[int] = None
 ) -> MetricResult:
     """
     Compute all retrieval metrics for single query.
@@ -239,13 +242,13 @@ def compute_metrics(
     # NDCG@K
     ndcg_at_k = {k: compute_ndcg_at_k(retrieved_ids, relevant_ids, k) for k in k_values}
 
-    # MAP (for single query, same as AP)
-    map_score = ndcg_at_k.get(max(k_values)) if ndcg_at_k else 0.0
+    # MAP for a single query is its average precision (not NDCG).
+    map_score = compute_average_precision(retrieved_ids, relevant_ids)
 
     return MetricResult(
         precision_at_k=precision_at_k,
         mrr=mrr,
         ndcg_at_k=ndcg_at_k,
         map_score=map_score,
-        recall_at_k=recall_at_k
+        recall_at_k=recall_at_k,
     )
