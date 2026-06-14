@@ -655,7 +655,7 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
 - [x] **Fix bug 1 (MAP)**: `compute_average_precision` helper in `metrics.py`; per-query MAP now uses
   it (was NDCG@max_k); `compute_map` reuses it. DONE (4 regression tests). `Strategy` enum stub
   (bug 2) and `perf_counter` timing (bug 3) deferred to their steps (M5 / M4).
-- [ ] `tests/` scaffold + `conftest.py`; tests locking current behavior + MAP regression.
+- [x] `tests/` scaffold + `conftest.py`; behavior-lock tests for retrieval/query/pipeline/evaluator + MAP regression. DONE (60 tests).
 **Files:** `.env(.example)`, `rag/config/*`, `rag/interfaces/protocols.py`, `rag/embeddings/fake.py`,
 `evaluation/metrics.py`, `rag/core.py`, `requirements.txt`, `pyproject.toml`, `tests/*`.
 **Acceptance:** `pytest -m "not slow"` green; MAP test proves real AP ≠ NDCG; `black`/`ruff`/`mypy`
@@ -858,7 +858,7 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 - [x] `rag/interfaces/protocols.py` (all Protocols + shared dataclasses). DONE (9 tests).
 - [x] Move `SimpleEmbedder` → `HashEmbedder` (alias kept) + inject into SemanticRetriever. DONE (7 tests).
 - [x] Fix MAP bug + AP helper + regression test (4 tests). DONE. (`Strategy` enum -> M5; timing -> M4.)
-- [ ] `tests/` scaffold + behavior-lock tests.
+- [x] `tests/` scaffold + behavior-lock tests. DONE (60 tests total).
 
 **Retrieval core (M1)**
 - [ ] Real embedders (bge-small / bge-m3 / hf-inference).
