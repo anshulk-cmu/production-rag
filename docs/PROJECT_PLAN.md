@@ -548,6 +548,20 @@ tests prove it), and **statistical significance** where claims are comparative (
 "X beats Y" without enough samples / a significance check / confidence intervals; note n and
 variance). No feature is "done" until its correctness is demonstrated, not asserted.
 
+**RULE — no scope creep; comprehensive within scope.** Do NOT add features beyond the locked scope
+in this document. But every feature that IS in scope must be implemented **comprehensively and to
+research grade** — no stubs, no partial coverage, no "lightweight" shortcuts. The minimal-code rule
+governs *how much code*; this rule governs *how complete the coverage* must be: minimal code,
+maximal coverage of what each in-scope feature genuinely requires.
+
+**RULE — GPU-accelerate by default when it cuts latency.** On GPU profiles (`local`/`cloud`), prefer
+stable GPU-accelerated libraries over CPU equivalents where they reduce latency: torch CUDA tensors
+for similarity/array math, faiss-gpu / cuVS for ANN, CuPy for NumPy-style ops, cuML for ML
+(clustering, nearest-neighbour). Route this through a central device helper (`rag/utils/device.py`)
+so the choice is one place. **Always keep a correct CPU fallback** so the `cpu`/`fake` profiles, CI,
+and non-CUDA machines still work. Do not add a GPU library that doesn't install cleanly or isn't
+stable on the target CUDA (12.8 / Blackwell).
+
 **Definition of Done (per component) — all required before moving on:**
 1. **Structure** — lives in its own module; implements its `Protocol`/ABC from `rag/interfaces`;
    exported via the package `__init__`; registered in `rag/config` where it's selectable; consistent
@@ -828,7 +842,7 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 
 **Foundations (M0)**
 - [x] `rag/config/` settings + model registry (local/cloud/zerogpu/cpu/fake profiles). DONE (7 tests).
-- [ ] `rag/observability/` logging + Prometheus metrics + Loki logs + watch (built first; all use it).
+- [x] `rag/observability/` logging + Prometheus metrics + Loki logs + watch (built first; all use it). DONE (8 tests).
 - [ ] `infra/observability/` Grafana stack (docker-compose: Prometheus+Loki+Grafana) + dashboards.
 - [x] `requirements.txt` + `pyproject` extras + `requires-python>=3.10` + auto-discover subpackages. DONE.
 - [ ] `rag/interfaces/protocols.py`.

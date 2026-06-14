@@ -463,6 +463,13 @@ Switching environments is one switch — `RAG_PROFILE`:
 
 `HF_TOKEN` (write scope) is read from `.env`; the legacy `HF-Token` spelling is also accepted.
 
+## Observability
+
+Every component reports through `rag/observability`: structured logs (optionally JSON, shippable to
+Loki) and Prometheus metrics — per-stage latency histograms (p50/p95/p99), throughput, tokens,
+cache hit/miss, model-load times, index size, eval quality, and GPU/RAM/CPU usage. View them in
+**Grafana** (`infra/observability/` stack) or as a terminal table via the in-app watch view.
+
 ## Author
 
 **Anshul Kumar**
