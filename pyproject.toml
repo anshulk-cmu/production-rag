@@ -44,6 +44,8 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "python-dotenv>=1.0",
+    "prometheus-client>=0.20",
+    "psutil>=5.9",
 ]
 
 [project.urls]
@@ -62,12 +64,12 @@ graph = ["networkx>=3.3"]
 serve = ["gradio>=4.44", "spaces>=0.30"]
 eval = ["datasets>=2.20", "pandas>=2.2", "scikit-learn>=1.5"]
 gpu = ["accelerate>=0.33", "bitsandbytes>=0.43"]
-monitoring = ["prometheus-client>=0.20", "python-logging-loki>=0.3.1"]
+monitoring = ["python-logging-loki>=0.3.1", "nvidia-ml-py>=12.0"]
 local = [
     "torch>=2.2", "accelerate>=0.33", "bitsandbytes>=0.43",
     "sentence-transformers>=3.0", "FlagEmbedding>=1.2", "faiss-cpu>=1.8",
     "transformers>=4.44", "networkx>=3.3", "huggingface_hub>=0.24",
-    "prometheus-client>=0.20", "python-logging-loki>=0.3.1",
+    "python-logging-loki>=0.3.1", "nvidia-ml-py>=12.0",
 ]
 all = [
     "sentence-transformers>=3.0", "FlagEmbedding>=1.2", "faiss-cpu>=1.8",
