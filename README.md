@@ -1,493 +1,192 @@
-# Production RAG System
+# production-rag
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+A retrieval-augmented generation library built from the ground up, with the components that are
+usually hidden inside third-party packages implemented directly in readable Python. The BM25 ranker,
+the rank fusion, and the evaluation metrics are all written out in the source.
+
+The project began as a teaching codebase (credited below) and is being developed into a
+production- and research-grade system: real open-source models from Hugging Face, rigorous
+evaluation, and observability integrated from the start. Development and testing happen locally on a
+12 GB GPU first; a hosted demonstration is the final step.
+
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Information Retrieval](https://img.shields.io/badge/IR-Information%20Retrieval-orange.svg)](https://github.com/anshulk-cmu/production-rag)
-[![Semantic Search](https://img.shields.io/badge/Search-Semantic%20%2B%20BM25-blueviolet.svg)](https://github.com/anshulk-cmu/production-rag)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-**Production-quality Retrieval-Augmented Generation with multi-strategy retrieval and comprehensive evaluation framework.**
+## Current status
 
-A complete implementation of enterprise-grade RAG retrieval systems that:
-- ✅ Combine semantic and lexical search (hybrid retrieval)
-- ✅ Optimize queries for better results
-- ✅ Rerank with cross-encoders
-- ✅ Evaluate with industry-standard metrics
-- ✅ Compare retriever strategies systematically
+The retrieval plumbing is implemented and tested; the embedding and reranking models are still
+placeholders pending replacement. This section states the current state precisely.
 
-> **Status (June 2026):** actively being upgraded from a teaching skeleton into a production- and
-> research-grade system — real Hugging Face models, contextual retrieval, GraphRAG, query transforms,
-> grounded generation, agentic/corrective RAG, persistence memory, a comprehensive evaluation suite,
-> and Grafana observability. Full roadmap: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md).
+Implemented and verified: BM25 from scratch (tunable k1 and b), hybrid retrieval with reciprocal
+rank fusion, and the standard information-retrieval metrics (precision, recall, MRR, NDCG). The
+foundation added during the rebuild includes a single configuration layer that selects the entire
+model stack through one environment variable, typed contracts for every swappable component, and an
+observability layer (Prometheus metrics and structured logs) that every component reports into. The
+local GPU budget was measured rather than estimated: bge-m3, bge-reranker-v2-m3, and Llama-3.2-3B
+together occupy approximately 8.1 GB of a 12 GB card in bf16/fp16.
 
-## Architecture
+Placeholder, pending replacement in the next milestone: the semantic embedder currently returns
+hash-based vectors rather than learned embeddings, and the reranker is a word-overlap heuristic
+rather than a cross-encoder.
 
-### Core Components
+The complete roadmap is documented in [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md). It covers real
+embeddings and reranking, document chunking and ingestion, grounded answer generation with
+citations, contextual retrieval, a first-class knowledge-graph retriever, corrective and agentic
+retrieval, persistent memory, an evaluation suite (a curated gold set and a BEIR subset), and a
+Gradio demonstration on Hugging Face Spaces.
+
+## Query flow
 
 ```
-User Query
-    ↓
-Query Analyzer (intent detection, keyword extraction)
-    ↓
-Query Optimizer (expansion, rewriting, stop word removal)
-    ↓
-Multi-Strategy Retriever (semantic + BM25 + hybrid)
-    ↓
-Cross-Encoder Reranker (relevance scoring)
-    ↓
-Top-K Results
+query
+  -> query analyzer      (intent, keywords, entities)
+  -> query optimizer     (rewrite, expand, drop stop words)
+  -> retriever           (semantic | BM25 | hybrid)
+  -> cross-encoder rerank
+  -> top-k results
 ```
 
-### Retrieval Strategies
+The three retrieval strategies share a single interface, so substituting one for another is a
+one-line change.
 
-| Strategy | How | Best For | Tradeoff |
-|----------|-----|----------|----------|
-| **Semantic** | Vector similarity (embeddings) | Understanding intent | Slow, CPU intensive |
-| **BM25** | TF-IDF lexical matching | Keywords, entities | Misses semantics |
-| **Hybrid** | Combine both (RRF) | General use | More complex |
+| Strategy | Ranking method | Strengths | Limitations |
+|----------|----------------|-----------|-------------|
+| Semantic | vector cosine similarity | meaning, paraphrase | requires a real embedding model |
+| BM25 | TF-IDF with term saturation | exact terms, names | does not capture meaning |
+| Hybrid | reciprocal rank fusion of both | most queries | additional moving parts |
+
+Hybrid fuses the two ranked lists with `score = 1/(k + rank_semantic) + 1/(k + rank_bm25)`. Because
+fusion depends on rank position rather than raw scores, it is stable across retrievers whose scores
+live on different scales.
 
 ## Installation
 
+The project uses conda as its default environment manager.
+
 ```bash
-# Clone repository
-git clone https://github.com/anshulk-cmu/production-rag.git
-cd production-rag
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Or install in development mode
-pip install -e .
+conda activate production-rag     # Python 3.11, CUDA torch
+pip install -e ".[dev]"           # core library and development tools
+pytest -q                         # 27 tests
 ```
 
-**Requirements:**
-- Python 3.8+
-- numpy (for embeddings and scoring)
+The core install is intentionally light (numpy, pydantic, prometheus-client). Heavier components are
+provided through optional dependency groups: `embeddings, vectorstore, hosted, llm, loaders, graph,
+serve, eval, gpu, monitoring, local, all`. For the full local GPU stack, install `".[local]"` with a
+CUDA build of torch.
 
-## Quick Start
+## Configuration
 
-### 1. Basic Retrieval
+Settings are read from environment variables and a local `.env` file (see
+[.env.example](.env.example)). Moving between a laptop GPU, a cloud instance, and a free Hugging Face
+Space requires changing a single value, `RAG_PROFILE`:
+
+| Profile | Target | Embedder | Reranker | LLM |
+|---------|--------|----------|----------|-----|
+| `local` | 12 GB GPU (default) | bge-m3 | bge-reranker-v2-m3 | Llama-3.2-3B-Instruct |
+| `cloud` | AWS EC2 24/48 GB | bge-m3 | bge-reranker-v2-m3 | Llama-3.1-8B-Instruct |
+| `zerogpu` | HF Space (GPU) | bge-m3 | bge-reranker-v2-m3 | Llama-3.2-3B-Instruct |
+| `cpu` | HF Space (free CPU) | bge-small-en-v1.5 | ms-marco-MiniLM | Qwen2.5-1.5B-Instruct |
+| `fake` | tests and CI | built-in | built-in | echo |
+
+Weights always load in bf16/fp16 and are never weight-quantized. The Hugging Face token is read from
+`HF_TOKEN` in `.env`; the earlier `HF-Token` spelling remains supported.
+
+## Usage
+
+Index documents and run the full pipeline:
 
 ```python
-from rag import SemanticRetriever
+from rag import HybridRetriever, RAGPipeline
 
-# Create retriever
-retriever = SemanticRetriever()
-
-# Index documents
-documents = {
-    "doc_1": "Machine learning is...",
-    "doc_2": "Deep learning uses...",
-    # ... more documents
+docs = {
+    "doc_1": "Machine learning trains models on data instead of hand-written rules.",
+    "doc_2": "BM25 ranks documents by term frequency with length normalization.",
 }
-retriever.index_documents(documents)
 
-# Retrieve
-query = "What is machine learning?"
-results = retriever.retrieve(query, k=5)
+rag = RAGPipeline(retriever=HybridRetriever())
+rag.index_documents(docs)
 
-for result in results:
-    print(f"Score: {result.score:.3f}, Content: {result.content[:100]}...")
+results = rag.query("how does ranking work?", k=10, rerank=True, rerank_k=5)
+print(rag.format_results(results))
 ```
 
-### 2. Comparison: Different Strategies
+Compare strategies on the same corpus:
 
 ```python
 from rag import SemanticRetriever, BM25Retriever, HybridRetriever
 
-retrievers = [
-    SemanticRetriever(),
-    BM25Retriever(),
-    HybridRetriever(),
-]
-
-for retriever in retrievers:
-    retriever.index_documents(documents)
-    results = retriever.retrieve(query, k=5)
-    print(f"{retriever.name}: Top result = {results[0].document_id}")
+for retriever in (SemanticRetriever(), BM25Retriever(), HybridRetriever()):
+    retriever.index_documents(docs)
+    top = retriever.retrieve("term frequency", k=5)
+    print(retriever.name, "->", top[0].document_id)
 ```
 
-### 3. Full RAG Pipeline
-
-```python
-from rag import RAGPipeline, HybridRetriever
-
-# Create pipeline
-rag = RAGPipeline(
-    retriever=HybridRetriever(),
-    optimize_query=True,      # Query optimization
-    rerank=True               # Reranking enabled
-)
-
-# Index documents
-rag.index_documents(documents)
-
-# Query
-results = rag.query(
-    query="Tell me about AI and machine learning",
-    k=10,
-    rerank_k=5  # Return top-5 after reranking
-)
-
-# Display
-print(rag.format_results(results, include_metadata=True))
-```
-
-### 4. Evaluation & Benchmarking
+Evaluate a retriever against a labeled set:
 
 ```python
 from rag import HybridRetriever
 from evaluation import Evaluator
 
-# Create test set (queries with ground truth)
-test_queries = [
-    ("machine learning", {"doc_1", "doc_5"}),
-    ("neural networks", {"doc_2", "doc_7"}),
-    # ... more test queries
-]
+test_queries = [("term frequency", {"doc_2"}), ("learning from data", {"doc_1"})]
 
-# Evaluate
-evaluator = Evaluator()
 retriever = HybridRetriever()
-retriever.index_documents(documents)
+retriever.index_documents(docs)
 
-results = evaluator.evaluate(
-    retriever=retriever,
-    test_queries=test_queries,
-    k_values=[1, 5, 10]
-)
-
-print(f"Precision@10: {results.avg_metrics['precision_at_10']:.3f}")
-print(f"NDCG@10: {results.avg_metrics['ndcg_at_10']:.3f}")
+result = Evaluator().evaluate(retriever, test_queries, k_values=[1, 5, 10])
+print(result.avg_metrics["precision_at_10"], result.avg_metrics["ndcg_at_10"])
 ```
 
-## Running Examples
-
-### Basic Examples
+## Demos and tools
 
 ```bash
-python examples/basic_rag.py
+python examples/basic_rag.py         # semantic, BM25, hybrid, full pipeline, batch
+python examples/evaluation_demo.py   # compares retrievers on a small labeled set
+python scripts/gpu_budget.py         # loads the local stack and reports VRAM usage
 ```
-
-Demonstrates:
-- Semantic retrieval
-- BM25 retrieval
-- Hybrid retrieval
-- Full RAG pipeline
-- Batch querying
-
-### Evaluation Benchmark
-
-```bash
-python examples/evaluation_demo.py
-```
-
-Compares retrievers on test set with metrics:
-- Precision@K (how many results are relevant)
-- Recall@K (how many relevant items did we find)
-- MRR (where is the first relevant result)
-- NDCG@K (ranked relevance)
-- MAP (average precision)
-
-## Key Concepts
-
-### Retrieval Strategies
-
-**Semantic Retrieval**
-- Embed query and documents into vectors
-- Find similarity using cosine distance
-- Captures meaning and intent
-- Example: "car" matches "automobile"
-
-**BM25 Retrieval**
-- TF-IDF with term frequency saturation
-- Fast lexical keyword matching
-- Handles stop words and term importance
-- Example: exact keyword "machine learning" matches
-
-**Hybrid Retrieval**
-- Combine semantic and BM25 using RRF (Reciprocal Rank Fusion)
-- Gets high recall from both approaches
-- Better precision than either alone
-- Formula: score = 1/(k + rank_semantic) + 1/(k + rank_bm25)
-
-### Query Optimization
-
-1. **Query Expansion**: Add synonyms and related terms
-2. **Query Rewriting**: Clarify ambiguous queries
-3. **Stop Word Removal**: Focus on important terms
-4. **Intent Detection**: Route to best retriever
-
-### Reranking
-
-After retrieving 100+ candidates, use cross-encoder to:
-- Score relevance more precisely
-- Identify truly relevant documents
-- Return only top-k best matches
-- Improves precision without hurting recall
-
-### Evaluation Metrics
-
-**Precision@K**: Of top-K results, how many are relevant?
-```
-P@10 = relevant_in_top_10 / 10
-```
-
-**Recall@K**: Of all relevant items, how many did we find?
-```
-R@10 = relevant_in_top_10 / total_relevant
-```
-
-**MRR**: Where is the first relevant result?
-```
-MRR = 1 / rank_of_first_relevant
-Best = 1.0 (first result relevant), Worst = 0.0 (none relevant)
-```
-
-**NDCG@K**: Ranked relevance accounting for position
-```
-NDCG = DCG / IDCG
-Higher scores = better ranking of relevant items
-```
-
-**MAP**: Average precision across queries
-```
-MAP = average(precision at each relevant item position)
-```
-
-## Project Structure
-
-```
-rag-system/
-├── rag/                           # Core library
-│   ├── core.py                   # RAG pipeline
-│   ├── retrieval/
-│   │   ├── base.py              # Abstract retriever
-│   │   ├── semantic.py          # Semantic retrieval
-│   │   ├── bm25_retriever.py   # BM25 lexical search
-│   │   ├── hybrid.py            # Hybrid RRF
-│   │   └── reranker.py          # Cross-encoder reranking
-│   └── query/
-│       ├── optimizer.py         # Query optimization
-│       └── analyzer.py          # Query analysis
-├── evaluation/
-│   ├── metrics.py               # Evaluation metrics
-│   └── evaluator.py             # Benchmark runner
-├── examples/
-│   ├── basic_rag.py            # Working examples
-│   └── evaluation_demo.py       # Benchmark demo
-├── README.md
-├── pyproject.toml
-└── LICENSE
-```
-
-## API Reference
-
-### RAGPipeline
-
-```python
-from rag import RAGPipeline, HybridRetriever
-
-pipeline = RAGPipeline(
-    retriever=HybridRetriever(),
-    optimize_query=True,
-    rerank=True
-)
-
-# Index documents
-pipeline.index_documents({"doc_id": "content", ...})
-
-# Single query
-results = pipeline.query(
-    query="search query",
-    k=10,                    # Retrieve top-10
-    rerank_k=5              # Rerank to top-5
-)
-
-# Batch queries
-results_list = pipeline.batch_query(
-    queries=["query1", "query2", ...],
-    k=10
-)
-
-# Get statistics
-stats = pipeline.get_stats()
-```
-
-### Evaluation
-
-```python
-from evaluation import Evaluator
-
-evaluator = Evaluator()
-
-# Single retriever
-result = evaluator.evaluate(
-    retriever=retriever,
-    test_queries=[(query, relevant_set), ...],
-    k_values=[1, 5, 10]
-)
-
-# Compare multiple
-results = evaluator.compare(
-    retrievers=[semantic, bm25, hybrid],
-    test_queries=test_queries
-)
-
-# Display
-evaluator.print_comparison(results)
-```
-
-### Metrics
-
-```python
-from evaluation.metrics import compute_metrics
-
-metrics = compute_metrics(
-    retrieved_ids=["doc_1", "doc_5", "doc_3", ...],
-    relevant_ids={"doc_1", "doc_2"},
-    k_values=[1, 5, 10]
-)
-
-print(f"P@10: {metrics.precision_at_k[10]:.3f}")
-print(f"R@10: {metrics.recall_at_k[10]:.3f}")
-print(f"NDCG@10: {metrics.ndcg_at_k[10]:.3f}")
-print(f"MRR: {metrics.mrr:.3f}")
-```
-
-## Performance Characteristics
-
-**On 10 documents:**
-- Semantic indexing: ~10ms
-- BM25 indexing: ~5ms
-- Semantic retrieve: ~2ms
-- BM25 retrieve: ~1ms
-- Hybrid retrieve: ~3ms
-- Reranking: ~5ms
-
-**Scales linearly:** 1000 documents = ~100ms retrieval
-
-## Design Patterns
-
-### 1. Strategy Pattern
-Each retriever (Semantic, BM25, Hybrid) implements same interface:
-```python
-class BaseRetriever(ABC):
-    def retrieve(self, query, k) -> List[RetrievalResult]
-```
-Easy to swap strategies without changing pipeline.
-
-### 2. Pipeline Pattern
-RAGPipeline orchestrates: query analysis → optimization → retrieval → reranking
-Each stage is pluggable.
-
-### 3. Composition over Inheritance
-Hybrid combines Semantic + BM25 using composition, not inheritance.
-
-## Production Considerations
-
-### Scaling
-- Cache embeddings for repeated queries
-- Use approximate nearest neighbor search (HNSW, IVF)
-- Batch queries for efficiency
-- Implement query caching
-
-### Monitoring
-- Track retrieval quality metrics
-- Monitor query latency
-- Log failed retrievals
-- A/B test retriever strategies
-
-### Reliability
-- Implement circuit breakers for external services
-- Add retry logic
-- Handle edge cases (empty queries, large result sets)
-- Graceful degradation if components fail
-
-### Optimization
-- Hybrid gives best precision-recall tradeoff
-- Reranking improves precision significantly
-- Query optimization increases recall
-- Experiment with weights for your domain
-
-## Advanced Techniques
-
-Not implemented (but easy to add):
-- **Dense passage retrieval** - Fine-tuned retrievers
-- **Approximate nearest neighbor** - HNSW, IVF for scale
-- **Query understanding** - Named entity recognition, intent parsing
-- **Multi-hop reasoning** - Chain retrievals for complex queries
-- **Prompt engineering** - Optimize prompts for LLMs
-- **Fusion with LLM** - Combine retrieval with language generation
-
-## Resources
-
-### Papers
-- "BM25 Weighting for Information Retrieval" - Okapi BM25
-- "Sentence-BERT: Semantic Textual Similarity" - Sentence embeddings
-- "Dense Passage Retrieval for Open-Domain QA" - DPR
-- "ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT" - ColBERT
-
-### Tools
-- [sentence-transformers](https://www.sbert.net/) - Embeddings in production
-- [Qdrant](https://qdrant.tech/) - Vector database
-- [Weaviate](https://weaviate.io/) - Vector search
-- [LiteLLM](https://github.com/BerriAI/litellm) - Unified LLM API
-- [LangChain](https://python.langchain.com/) - LLM orchestration
-
-## Development
-
-This project uses **conda** as the default environment manager.
-
-```bash
-conda activate production-rag      # Python 3.11, CUDA torch
-pip install -e ".[dev]"            # core + dev tools
-pytest -q                          # run the test suite
-```
-
-Optional dependency groups: `embeddings, vectorstore, hosted, llm, loaders, graph, serve, eval,
-gpu, monitoring, local, all` (e.g. `pip install -e ".[local]"` for the full GPU stack).
-
-## Configuration
-
-Settings load from environment variables and a local `.env` (see [.env.example](.env.example)).
-Switching environments is one switch — `RAG_PROFILE`:
-
-| Profile | Use | Embedder | Reranker | LLM |
-|---------|-----|----------|----------|-----|
-| `local` | 12GB GPU dev (default) | bge-m3 | bge-reranker-v2-m3 | Llama-3.2-3B-Instruct |
-| `cloud` | AWS EC2 24/48GB | bge-m3 | bge-reranker-v2-m3 | Llama-3.1-8B-Instruct |
-| `zerogpu` | HF Space (GPU) | bge-m3 | bge-reranker-v2-m3 | Llama-3.2-3B-Instruct |
-| `cpu` | HF Space (free CPU) | bge-small-en-v1.5 | MiniLM | Qwen2.5-1.5B-Instruct |
-| `fake` | tests / CI | built-in fakes | built-in fakes | echo |
-
-`HF_TOKEN` (write scope) is read from `.env`; the legacy `HF-Token` spelling is also accepted.
 
 ## Observability
 
-Every component reports through `rag/observability`: structured logs (optionally JSON, shippable to
-Loki) and Prometheus metrics — per-stage latency histograms (p50/p95/p99), throughput, tokens,
-cache hit/miss, model-load times, index size, eval quality, and GPU/RAM/CPU usage. View them in
-**Grafana** (`infra/observability/` stack) or as a terminal table via the in-app watch view.
+Every component logs and measures itself through `rag/observability`. Metrics are Prometheus
+instruments: per-stage latency histograms (which yield p50, p95, and p99 rather than an average
+alone), request and token counters, cache hit and miss counts, model-load times, index size,
+evaluation scores, and GPU, RAM, and CPU usage. Logs are structured and can be shipped to Loki. The
+metrics and logs are viewed in Grafana through the `infra/observability/` stack, with a terminal
+table available for quick inspection.
+
+## Repository layout
+
+```
+rag/
+  config/         settings and model registry (the profile switch)
+  observability/  logging, Prometheus metrics, watch
+  interfaces/     typed contracts every component implements
+  utils/          device helpers and GPU memory cleanup
+  retrieval/      base, semantic, bm25, hybrid, reranker
+  query/          analyzer, optimizer
+  core.py         the pipeline that connects the stages
+evaluation/       IR metrics and benchmark runner
+examples/         runnable demos
+scripts/          gpu_budget and related tools
+tests/            unit tests
+docs/             project plan and roadmap
+```
+
+The structure follows three deliberate choices. Retrievers sit behind one `BaseRetriever` interface,
+so the pipeline does not depend on which strategy is in use. Hybrid is built by composing a semantic
+retriever and a BM25 retriever rather than inheriting from either. The pipeline is a sequence of
+pluggable stages, which makes the planned additions (real models, generation, a graph retriever) a
+matter of implementing contracts rather than rewriting the core.
 
 ## Author
 
-**Anshul Kumar**
-- GitHub: [@anshulk-cmu](https://github.com/anshulk-cmu)
-- Email: anshulk@andrew.cmu.edu
+**Anshul Kumar**. [@anshulk-cmu](https://github.com/anshulk-cmu), anshulk@andrew.cmu.edu
 
 ## Acknowledgments
 
-Thanks to **Artem Kazakov Kozlov ([@KazKozDev](https://github.com/KazKozDev))** for the original
-[production-rag](https://github.com/KazKozDev/production-rag) starting codebase that this project
-builds on.
+This project started from the original [production-rag](https://github.com/KazKozDev/production-rag)
+codebase by **Artem Kazakov Kozlov ([@KazKozDev](https://github.com/KazKozDev))**, with thanks.
 
 ## License
 
-MIT License - See LICENSE file
-
----
-
-**Building production-quality RAG systems** 🚀
-
-Questions? Check examples/ folder for working code.
+MIT. See [LICENSE](LICENSE).
