@@ -143,3 +143,6 @@ data/
 *.pkl
 *.pickle
 .env
+
+# Local run log (system of record, not committed)
+runlog.md
