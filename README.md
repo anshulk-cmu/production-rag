@@ -476,6 +476,12 @@ cache hit/miss, model-load times, index size, eval quality, and GPU/RAM/CPU usag
 - GitHub: [@anshulk-cmu](https://github.com/anshulk-cmu)
 - Email: anshulk@andrew.cmu.edu
 
+## Acknowledgments
+
+Thanks to **Artem Kazakov Kozlov ([@KazKozDev](https://github.com/KazKozDev))** for the original
+[production-rag](https://github.com/KazKozDev/production-rag) starting codebase that this project
+builds on.
+
 ## License
 
 MIT License - See LICENSE file
