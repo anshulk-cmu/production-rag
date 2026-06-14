@@ -849,7 +849,7 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 - [x] `rag/observability/` logging + Prometheus metrics + Loki logs + watch (built first; all use it). DONE (8 tests).
 - [ ] `infra/observability/` Grafana stack (docker-compose: Prometheus+Loki+Grafana) + dashboards.
 - [x] `requirements.txt` + `pyproject` extras + `requires-python>=3.10` + auto-discover subpackages. DONE.
-- [ ] `rag/interfaces/protocols.py`.
+- [x] `rag/interfaces/protocols.py` (all Protocols + shared dataclasses). DONE (9 tests).
 - [ ] Move `SimpleEmbedder` → `HashEmbedder` (alias kept).
 - [ ] Fix MAP bug + AP helper + regression test; `Strategy` enum stub; timing scaffold.
 - [ ] `tests/` scaffold + behavior-lock tests.
