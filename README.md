@@ -161,6 +161,7 @@ rag/
   config/         settings and model registry (the profile switch)
   observability/  logging, Prometheus metrics, watch
   interfaces/     typed contracts every component implements
+  embeddings/     embedder implementations (hash fallback now, real models next)
   utils/          device helpers and GPU memory cleanup
   retrieval/      base, semantic, bm25, hybrid, reranker
   query/          analyzer, optimizer

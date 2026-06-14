@@ -649,8 +649,9 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
 - [ ] **`infra/observability/`** Grafana stack: `docker-compose.yml` (Prometheus + Loki + Grafana +
   Alloy/Promtail) with provisioned datasources + dashboards; `make observability-up`. Verify the
   app's `/metrics` is scraped and logs appear in Grafana before building further components.
-- [ ] Move `SimpleEmbedder` → `rag/embeddings/fake.py` `HashEmbedder` (keep alias + DeprecationWarning;
-  add deterministic md5-seed option + `embed_batch`).
+- [x] Move `SimpleEmbedder` → `rag/embeddings/fake.py` `HashEmbedder` (alias kept; `embed_batch`
+  added; SemanticRetriever takes an injected embedder). DONE (7 tests). Note: base.py RetrievalResult
+  metadata still has a legacy implicit-Optional mypy issue, deferred to the M1 base refactor.
 - [ ] **Fix bugs 1 & part of 2/3**: MAP + AP helper in `metrics.py`; shared `Strategy` enum stub;
   add `perf_counter` timing scaffolding in `core.py`.
 - [ ] `tests/` scaffold + `conftest.py`; tests locking current behavior + MAP regression.
@@ -854,7 +855,7 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 - [ ] `infra/observability/` Grafana stack (docker-compose: Prometheus+Loki+Grafana) + dashboards.
 - [x] `requirements.txt` + `pyproject` extras + `requires-python>=3.10` + auto-discover subpackages. DONE.
 - [x] `rag/interfaces/protocols.py` (all Protocols + shared dataclasses). DONE (9 tests).
-- [ ] Move `SimpleEmbedder` → `HashEmbedder` (alias kept).
+- [x] Move `SimpleEmbedder` → `HashEmbedder` (alias kept) + inject into SemanticRetriever. DONE (7 tests).
 - [ ] Fix MAP bug + AP helper + regression test; `Strategy` enum stub; timing scaffold.
 - [ ] `tests/` scaffold + behavior-lock tests.
 
