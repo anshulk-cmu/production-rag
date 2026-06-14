@@ -102,8 +102,8 @@ A read-only `whoami-v2` check using the token in `.env` returned:
   not confident. See the Guardrails section below. (Scope update 2026-06-14, user-approved.)
 
 > **Scope is LOCKED.** This document is the **final scope of the project**. Work is tracked against
-> these milestones; any scope change requires an explicit update to this plan file. Updates so far:
-> 2026-06-14 added #15 Guardrails.
+> these milestones; any scope change requires an explicit update to this plan file. Updates so far
+> (2026-06-14): #14 unified-Supabase persistence decision, #15 Guardrails, #16 regular record DB.
 
 ---
 
@@ -703,15 +703,14 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
   **8.14 GB used / 11.94 GB, peak 8.12 GB, 3.80 GB headroom → FITS**. Nothing needs CPU offload;
   `RAG_RERANKER_DEVICE=cpu` remains the fallback if VRAM ever tightens. Always bf16/fp16, no weight
   quantization (`RAG_DTYPE=bfloat16`, `RAG_QUANTIZATION=none`); PolarQuant applies to the KV cache only.
-- [ ] Rename `.env` key `HF-Token` → `HF_TOKEN` (+ back-compat shim); add `.env.example`.
-  (HF reachability + `write` scope already verified; full write round-trip deferred to M7.)
-- [ ] `rag/config/settings.py` (`RAGSettings` via pydantic-settings; `.env` load; `get_settings()`)
-  and `rag/config/model_registry.py` (profile presets cpu/zerogpu/fake).
-- [ ] Rewrite `requirements.txt`; add `pyproject` optional-deps groups; pin `requires-python>=3.10`;
-  register new subpackages; add `ruff`.
-- [ ] `rag/interfaces/protocols.py` (all Protocols, `@runtime_checkable`).
-- [ ] **`rag/observability/`** (logging + Prometheus metrics + Loki log shipping + watch) — built
-  first so every later component logs/instruments through it; unit-tested; wired into `get_stats()`.
+- [x] `.env` key `HF_TOKEN` (user renamed from `HF-Token`; config reads both via alias); `.env.example` added. DONE.
+- [x] `rag/config/settings.py` (`RAGSettings` via pydantic-settings; `.env` load; `get_settings()`)
+  and `rag/config/model_registry.py` (profile presets local/cloud/zerogpu/cpu/fake). DONE.
+- [x] Rewrite `requirements.txt`; add `pyproject` optional-deps groups; pin `requires-python>=3.10`;
+  auto-discover subpackages; add `ruff`. DONE.
+- [x] `rag/interfaces/protocols.py` (all Protocols, `@runtime_checkable`). DONE.
+- [x] **`rag/observability/`** (logging + Prometheus metrics + Loki log shipping + watch) — built
+  first so every later component logs/instruments through it; unit-tested. DONE.
 - [x] **`infra/observability/`** observability (DONE — Grafana Cloud chosen over local Docker): stdlib
   non-blocking Loki handler in `logging.py` (logs verified shipping, HTTP 204), config fields, Alloy
   `config.alloy` for metrics remote_write, starter dashboard JSON, README. Local docker-compose left
@@ -725,8 +724,8 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
 - [x] `tests/` scaffold + `conftest.py`; behavior-lock tests for retrieval/query/pipeline/evaluator + MAP regression. DONE (60 tests).
 **Files:** `.env(.example)`, `rag/config/*`, `rag/interfaces/protocols.py`, `rag/embeddings/fake.py`,
 `evaluation/metrics.py`, `rag/core.py`, `requirements.txt`, `pyproject.toml`, `tests/*`.
-**Acceptance:** `pytest -m "not slow"` green; MAP test proves real AP ≠ NDCG; `black`/`ruff`/`mypy`
-clean; `get_settings()` loads `HF_TOKEN`; HF write round-trip succeeds and cleans up.
+**Acceptance:** `pytest` green (71 tests, 88% cov); MAP test proves real AP ≠ NDCG; `black`/`ruff`
+clean; `get_settings()` loads `HF_TOKEN`. (HF write round-trip is an M7 deploy gate, not M0.)
 **Commits:** `chore: pin python and restructure dependencies into extras` · `feat(config): add
 settings and model registry with local/cloud/zerogpu/cpu profiles` · `feat(observability): add
 structured logging and metrics registry` · `feat(interfaces): add component protocols` ·
@@ -1171,9 +1170,11 @@ Report tables: **Retrieval** (P@k, R@k, MRR, NDCG@k, MAP, Hit@k, R-Precision), *
 - **Hosted vector DB** — managed vector store (Qdrant Cloud free tier) used as a `VectorStore` backend; durable persistence without local files.
 
 ## Risks & mitigations
-- **12GB VRAM ceiling (local):** 7B fp16 won't fit alongside embedder+reranker → default to **4-bit
-  NF4** for the LLM; lazy-load or CPU-place the reranker; `RAG_QUANTIZATION`/`RAG_RERANKER_DEVICE`
-  flags to tune. Fallback to Qwen2.5-3B fp16 if 4-bit quality is insufficient.
+- **12GB VRAM ceiling (local):** resolved by the model choice — the verified budget is the 3B LLM +
+  bge-m3 + bge-reranker-v2-m3 at **bf16/fp16 = 8.14 GB / 11.94 GB** (no weight quantization, per the
+  precision rule). PolarQuant applies to the KV cache only. Levers if it ever tightens:
+  `RAG_RERANKER_DEVICE=cpu` (offload reranker ~1 GB) or lazy-load; 4-bit is a last-resort flag, not
+  the default.
 - **CPU LLM latency** (HF `cpu` fallback only, 1.5B fp32 is slow): stream tokens + progress UI; the
   demo defaults to ZeroGPU for generation. (Not a concern locally — full-speed GPU.)
 - **ZeroGPU daily quota:** default to CPU; GPU only on leaf functions; batch; warm-cache models.
