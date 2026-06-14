@@ -534,6 +534,12 @@ tests, docs — before the next one starts.** No half-built modules; the repo st
 at every step. A "component" = one module with a clear interface (e.g., the embedder, the FAISS
 store, the chunker, the CRAG grader, memory).
 
+**RULE — minimal, simple code and minimal, simple comments.** Always prefer the smallest, clearest
+implementation that satisfies the component's contract. No speculative abstraction, no clever
+one-liners, no over-engineering. Comments are sparse and explain only *why* (non-obvious intent),
+never restate *what* the code already says — prefer readable plain code over comments. This applies
+to every component and every commit.
+
 **Definition of Done (per component) — all required before moving on:**
 1. **Structure** — lives in its own module; implements its `Protocol`/ABC from `rag/interfaces`;
    exported via the package `__init__`; registered in `rag/config` where it's selectable; consistent
