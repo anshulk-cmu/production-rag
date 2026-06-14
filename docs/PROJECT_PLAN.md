@@ -417,7 +417,8 @@ without it. The **same leaf functions** run un-decorated at full speed under the
   additive: `answer()` returns a `GenerationResult`; all new collaborators are injected, default
   to fakes/None.
 - **Python pin.** Project currently allows 3.8; HF Spaces + torch + `spaces` are happiest on
-  **3.10/3.11**. Pin `requires-python = ">=3.10"`; dev on a 3.11 venv; CI matrix 3.10 + 3.11.
+  **3.10/3.11**. Pin `requires-python = ">=3.10"`; **default env = conda `production-rag` (Python
+  3.11)**; CI matrix 3.10 + 3.11.
 - **Secrets.** Rename `.env` key `HF-Token` → **`HF_TOKEN`** (hyphen is a non-standard env id);
   add a one-line back-compat shim mapping the old key. On the Space set `HF_TOKEN` as a **Space
   secret** (never commit `.env`, already gitignored). Gated models (Llama) need license
@@ -603,10 +604,10 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
 
 ### M0 — Foundations (local GPU env, config, secrets, deps, tests scaffold, bug fixes, interfaces)
 **Tasks**
-- [ ] **Local GPU environment setup + smoke test** (first thing out of plan mode): create a 3.11
-  venv, install the `local` stack with **CUDA torch wheels**, and verify
-  `torch.cuda.is_available()`, the GPU name, and ~12GB VRAM. Quick load test of bge-m3 +
-  bge-reranker-v2-m3 + Llama-3.2-3B-Instruct (fp16 + PolarQuant) on the GPU to confirm the budget fits.
+- [x] **Local GPU environment setup** (DONE): **conda is the default env manager** (not venv/pip).
+  Env `production-rag` (renamed from `hdai`) — Python 3.11.15, torch 2.10.0+cu128, CUDA 12.8
+  available, NVIDIA RTX 5070 Ti Laptop GPU (11.94 GB VRAM, cc 12.0). Remaining sub-step: quick load
+  test of bge-m3 + bge-reranker-v2-m3 + Llama-3.2-3B-Instruct (fp16 + PolarQuant) to confirm the VRAM budget.
 - [ ] Rename `.env` key `HF-Token` → `HF_TOKEN` (+ back-compat shim); add `.env.example`.
   (HF reachability + `write` scope already verified; full write round-trip deferred to M7.)
 - [ ] `rag/config/settings.py` (`RAGSettings` via pydantic-settings; `.env` load; `get_settings()`)
@@ -814,7 +815,7 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 **Phase 0 — out of plan mode, immediate (local)**
 - [ ] **Store this plan in the repo:** copy it to `d:\Production-Rag-Project\docs\PROJECT_PLAN.md`
   and commit (`docs: add project plan and roadmap`). This is the very first action.
-- [ ] Local GPU env: 3.11 venv + CUDA torch wheels; verify `torch.cuda.is_available()` + ~12GB VRAM.
+- [x] Local GPU env (DONE): conda env `production-rag` (default), Python 3.11.15, torch 2.10+cu128, RTX 5070 Ti 11.94GB.
 - [ ] Load-test bge-m3 + bge-reranker-v2-m3 + Llama-3.2-3B-Instruct (fp16 + PolarQuant) on the GPU (budget check).
 - [ ] Rename `.env` key → `HF_TOKEN` (+ shim); add `.env.example`. (HF write scope already verified.)
 
