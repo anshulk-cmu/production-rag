@@ -91,9 +91,14 @@ A read-only `whoami-v2` check using the token in `.env` returned:
   `D:\golgi_vcc`; bigger models at full precision.
 - **#14 Free hosted vector DB option** — `QdrantVectorStore` (Qdrant Cloud free tier) behind the
   VectorStore ABC; alternative to local FAISS and a clean fix for HF ephemeral-disk persistence.
+- **#15 Guardrails (safety + abstention)** — `rag/guardrails/` wraps a best-in-class open-source
+  guard system (Llama Guard / Granite Guardian / Prompt-Guard, optionally NeMo Guardrails): refuse
+  out-of-scope / unanswerable / ungrounded / unsafe / jailbreak inputs, and say "I don't know" when
+  not confident. See the Guardrails section below. (Scope update 2026-06-14, user-approved.)
 
 > **Scope is LOCKED.** This document is the **final scope of the project**. Work is tracked against
-> these milestones; any scope change requires an explicit update to this plan file.
+> these milestones; any scope change requires an explicit update to this plan file. Updates so far:
+> 2026-06-14 added #15 Guardrails.
 
 ---
 
@@ -281,6 +286,11 @@ production-rag/
 │   ├── routing/                  (NEW — agentic)
 │   │   └── router.py             Router ABC + HeuristicRouter (default) + LLMRouter (opt-in)
 │   │
+│   ├── guardrails/               (NEW — safety + abstention; wraps an expert OSS guard system)
+│   │   ├── base.py               Guardrail ABC + GuardDecision (allow/clarify/refuse + reason)
+│   │   ├── gates.py              input / answerability / output gates + green/yellow/red routing
+│   │   └── backends.py           adapters: Llama Guard / Granite Guardian / NeMo / Prompt-Guard / fake
+│   │
 │   └── utils/                    (NEW)
 │       ├── device.py             cpu/cuda detection, dtype, ZeroGPU-safe import of `spaces`
 │       ├── timing.py             perf timers feeding retrieval_stats
@@ -445,6 +455,44 @@ instance-running`, then `describe-instances` for IPs; region us-east-1; teardown
   commit AWS keys (use the existing CLI profile / IAM role from golgi).
 - **Purpose:** establish a full-precision quality/perf ceiling (e.g., Llama-3.1-8B fp16) to compare
   against the quantized local 12GB run; numbers feed the eval comparison table. Optional tier.
+
+## Guardrails (research-grade safety + abstention) — scope addition (2026-06-14)
+
+Added at user request as an explicit update to the locked scope. The system must **refuse rather
+than guess**: no answers outside the indexed corpus, no answers to out-of-scope or random questions,
+no answer when retrieval finds no supporting source, an explicit "I don't know" when not confident
+or when the answer is not grounded in retrieved context, plus blocking of harmful content and
+jailbreak / prompt-injection attempts. Standard RAG lacks principled abstention (the "epistemic
+mismatch" problem; legal RAG still hallucinates 17-33% of the time), so guardrails are a first-class
+layer, evaluated at runtime and in CI.
+
+**Approach: use a best-in-class open-source guardrails model/system as the expert, not hand-rolled
+heuristics.** `rag/guardrails/` is a thin orchestration layer behind one `Guardrail` interface that
+delegates to a pluggable expert backend:
+- **Guardian models (open, HF):** **Llama Guard 3** (Meta; harmful content, 13 categories),
+  **Granite Guardian** (IBM; harm + hallucination/groundedness, "thinking" mode), or **ShieldGemma**
+  (Google) for safety; **Prompt-Guard-2** (Meta, small DeBERTa, CPU/GPU) for jailbreak /
+  prompt-injection; groundedness can reuse the existing NLI judge.
+- **Orchestration system (optional):** **NeMo Guardrails** or **LlamaFirewall** for programmable
+  input/output rails and flows, if we want declarative rules on top of the guardian models.
+- **Our thin gates wrap the expert** at three points: input (injection / harm / off-domain),
+  answerability (no source or low relevance -> refuse), output (groundedness / confidence / harm /
+  citation enforcement -> abstain). Routing: green = answer with citations, yellow = clarify, red =
+  refuse.
+
+**Pluggable + config:** `RAG_GUARDRAILS={off,basic,full}` and `RAG_GUARD_BACKEND`
+(llama_guard / granite_guardian / nemo / fake); guard model IDs per profile in the model registry;
+the `fake` backend uses keyword/threshold stubs so CI needs no models. Guard models are small (86M-
+2B) and fit the 12GB budget alongside the main stack, or run on demand.
+
+**Metrics + eval (runtime and CI converge):** Prometheus counters (blocked_injection,
+refused_out_of_scope, refused_no_source, refused_ungrounded, refused_unsafe, abstained_low_confidence);
+eval adds **Grounded-Refusal precision/recall** (answer the answerable, refuse the unanswerable) plus
+a small **adversarial/safety set** (jailbreaks, out-of-domain, unanswerable). Defense-in-depth:
+combine the guardian model + groundedness + thresholds; no single detector (they can be evaded).
+Risk taxonomy: OWASP LLM Top 10.
+
+Sources: [NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails) · [Granite Guardian (arXiv 2412.07724)](https://arxiv.org/html/2412.07724v1) · [LlamaFirewall (arXiv 2505.03574)](https://arxiv.org/pdf/2505.03574) · [Bypassing LLM Guardrails (arXiv 2504.11168)](https://arxiv.org/pdf/2504.11168) · [RAG guardrails + grounded refusals](https://www.blockchain-council.org/ai/reducing-ai-hallucination-in-production-rag-guardrails-evaluation-hitl/)
 
 ## The four bug fixes (folded into the milestones)
 
@@ -773,6 +821,21 @@ strategies with optimizer` · `feat(grading): add corrective rag grading and fal
 `feat(grading): add self-rag reflection` · `feat(routing): add heuristic and llm query routers` ·
 `feat(memory): add persistent conversation and semantic memory`.
 
+### M5.5 — Guardrails (safety + abstention)
+**Tasks**
+- [ ] `rag/guardrails/` (`base.py` Guardrail ABC + GuardDecision; `gates.py` input/answerability/
+  output gates + green/yellow/red routing; `backends.py` adapters for an expert OSS guard system).
+- [ ] Guard backends: Prompt-Guard-2 (jailbreak/injection), Llama Guard 3 / Granite Guardian /
+  ShieldGemma (harm + groundedness), NLI for groundedness; `fake` backend = keyword/threshold stubs.
+- [ ] Wire into `RAGPipeline.answer()`: input rail -> answerability gate -> generate -> output rail;
+  refuse with a reason ("out of scope" / "no source" / "not grounded" / "unsafe" / "not confident").
+- [ ] Config (`RAG_GUARDRAILS`, `RAG_GUARD_BACKEND`, thresholds) + guard models in the registry.
+- [ ] Metrics counters + Grounded-Refusal precision/recall + a small adversarial/safety test set.
+**Acceptance:** out-of-scope, unanswerable, ungrounded, unsafe, and jailbreak inputs are refused
+with the right reason; in-corpus answerable queries still answer with citations; each rail toggleable.
+**Commits:** `feat(guardrails): add guard interface and gates` · `feat(guardrails): add open guard
+model backends` · `feat(guardrails): wire input/output rails into the pipeline`.
+
 ### M6 — Comprehensive evaluation (gold set + BEIR + generation + system)
 **Tasks**
 - [ ] Confirm MAP fix; add graded NDCG, Hit@k, R-Precision to `metrics.py`.
@@ -893,6 +956,13 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 - [ ] Self-RAG reflection; HeuristicRouter + LLMRouter.
 - [ ] Persistence memory: ConversationMemory (SQLite) + SemanticMemory + FactExtractor; wire into
   `answer()`; survives restarts; `RAG_MEMORY` config.
+
+**Guardrails (M5.5)**
+- [ ] `rag/guardrails/` (base + gates + backends) wrapping an expert OSS guard system.
+- [ ] Backends: Prompt-Guard-2 (jailbreak), Llama Guard / Granite Guardian / ShieldGemma (harm +
+  groundedness), NLI groundedness; fake stub for CI.
+- [ ] Wire input/answerability/output rails into `answer()`; refuse with reason; `RAG_GUARDRAILS` config.
+- [ ] Counters + Grounded-Refusal precision/recall + adversarial/safety test set.
 
 **Evaluation (M6)**
 - [ ] Confirm MAP; add graded NDCG / Hit@k / R-Precision.
