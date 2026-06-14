@@ -32,16 +32,18 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
-    "numpy>=1.21.0",
+    "numpy>=1.26",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-dotenv>=1.0",
 ]
 
 [project.urls]
@@ -50,19 +52,42 @@ Repository = "https://github.com/anshulk-cmu/production-rag"
 Issues = "https://github.com/anshulk-cmu/production-rag/issues"
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "black>=23.0",
-    "mypy>=1.0",
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "black>=24.0", "ruff>=0.5", "mypy>=1.10"]
+embeddings = ["sentence-transformers>=3.0", "FlagEmbedding>=1.2"]
+vectorstore = ["faiss-cpu>=1.8"]
+hosted = ["qdrant-client>=1.10"]
+llm = ["transformers>=4.44", "accelerate>=0.33", "huggingface_hub>=0.24"]
+loaders = ["pypdf>=4.2", "beautifulsoup4>=4.12"]
+graph = ["networkx>=3.3"]
+serve = ["gradio>=4.44", "spaces>=0.30"]
+eval = ["datasets>=2.20", "pandas>=2.2", "scikit-learn>=1.5"]
+gpu = ["accelerate>=0.33", "bitsandbytes>=0.43"]
+monitoring = ["prometheus-client>=0.20", "python-logging-loki>=0.3.1"]
+local = [
+    "torch>=2.2", "accelerate>=0.33", "bitsandbytes>=0.43",
+    "sentence-transformers>=3.0", "FlagEmbedding>=1.2", "faiss-cpu>=1.8",
+    "transformers>=4.44", "networkx>=3.3", "huggingface_hub>=0.24",
+    "prometheus-client>=0.20", "python-logging-loki>=0.3.1",
+]
+all = [
+    "sentence-transformers>=3.0", "FlagEmbedding>=1.2", "faiss-cpu>=1.8",
+    "qdrant-client>=1.10", "transformers>=4.44", "accelerate>=0.33",
+    "huggingface_hub>=0.24", "pypdf>=4.2", "beautifulsoup4>=4.12",
+    "networkx>=3.3", "gradio>=4.44", "spaces>=0.30", "datasets>=2.20",
+    "pandas>=2.2", "scikit-learn>=1.5", "prometheus-client>=0.20",
+    "python-logging-loki>=0.3.1",
 ]
 
-[tool.setuptools]
-packages = ["rag", "rag.retrieval", "rag.query", "evaluation"]
+[tool.setuptools.packages.find]
+include = ["rag*", "evaluation*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311']
+target-version = ['py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

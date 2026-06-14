@@ -1,1 +1,6 @@
-numpy>=1.21.0
+# Core runtime dependencies (grows as components are added).
+# torch + transformers come from the conda env locally (CUDA) and CPU wheels on the HF Space.
+numpy>=1.26
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
