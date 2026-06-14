@@ -89,8 +89,13 @@ A read-only `whoami-v2` check using the token in `.env` returned:
   faster decode, near-lossless; longer contexts within 12GB VRAM.
 - **#13 AWS EC2 (24/48GB) cloud-GPU testing** — optional higher-tier test env via the AWS CLI from
   `D:\golgi_vcc`; bigger models at full precision.
-- **#14 Free hosted vector DB option** — `QdrantVectorStore` (Qdrant Cloud free tier) behind the
-  VectorStore ABC; alternative to local FAISS and a clean fix for HF ephemeral-disk persistence.
+- **#14 Hosted persistence — unified Supabase** (Postgres + pgvector + Storage): `PgVectorStore`
+  holds vectors, Postgres tables hold chats + document/chunk metadata, Supabase Storage holds the
+  raw original docs. One free, stable, open-source-core system (fixes HF ephemeral disk). Qdrant
+  Cloud (free) is the alternative dedicated vector backend. Local-first stays SQLite + FAISS + files.
+- **#16 Regular record DB** (`rag/store/`) — relational store for chats/messages, documents, and
+  chunk metadata, plus a blob store for raw original files. SQLite + filesystem locally; Postgres +
+  Supabase Storage hosted. The memory feature builds on this.
 - **#15 Guardrails (safety + abstention)** — `rag/guardrails/` wraps a best-in-class open-source
   guard system (Llama Guard / Granite Guardian / Prompt-Guard, optionally NeMo Guardrails): refuse
   out-of-scope / unanswerable / ungrounded / unsafe / jailbreak inputs, and say "I don't know" when
@@ -213,8 +218,15 @@ production-rag/
 │   │   ├── base.py                VectorStore ABC (add/search/save/load/__len__)
 │   │   ├── numpy_store.py         NumpyVectorStore (zero-dep flat cosine; .npz)
 │   │   ├── faiss_store.py         FaissVectorStore (IndexFlatIP → IVF/HNSW at scale; .faiss) — local default
-│   │   ├── qdrant_store.py        QdrantVectorStore (free hosted Qdrant Cloud; same ABC) — hosted option
-│   │   └── hf_persistence.py      push_index()/pull_index() to a PRIVATE HF Dataset repo
+│   │   ├── pgvector_store.py      PgVectorStore (Supabase/Postgres pgvector; hosted default) — same ABC
+│   │   ├── qdrant_store.py        QdrantVectorStore (free hosted Qdrant Cloud; same ABC) — alt hosted
+│   │   └── hf_persistence.py      push_index()/pull_index() to a PRIVATE HF Dataset repo (FAISS path)
+│   │
+│   ├── store/                     (NEW — regular DB: chats, documents, chunks, raw files)
+│   │   ├── base.py                RecordStore ABC (chats/messages, documents, chunks) + BlobStore ABC
+│   │   ├── sqlite_store.py        SqliteRecordStore (local default)
+│   │   ├── postgres_store.py      PostgresRecordStore (Supabase Postgres; hosted)
+│   │   └── blob.py                LocalBlobStore (filesystem) | SupabaseBlobStore (raw original docs)
 │   │
 │   ├── loaders/                   (NEW)  TEXT-ONLY (extract text layer only)
 │   │   ├── base.py                DocumentLoader ABC + Document dataclass
@@ -406,11 +418,17 @@ without it. The **same leaf functions** run un-decorated at full speed under the
   **Dataset** repo (`anshul2048/production-rag-index`). `IndexFlatIP` on normalized vectors ==
   exact cosine (matches current semantics); upgrade to IVF/HNSW only at scale. Default backend
   is the zero-dep `NumpyVectorStore`; FAISS is opt-in via the `vectorstore` extra.
-- **Free hosted vector DB option (`QdrantVectorStore`).** Behind the same `VectorStore` ABC, a
-  **Qdrant Cloud free-tier** backend (`hosted` extra; `QDRANT_URL`/`QDRANT_API_KEY` in env) gives
-  durable, server-side persistence — the cleanest fix for HF's ephemeral disk (no push/pull dance)
-  and a drop-in store for both the index and semantic memory. Local dev defaults to FAISS for
-  full-quality offline runs; the HF demo can use FAISS+Dataset **or** hosted Qdrant.
+- **Hosted persistence = unified Supabase (chosen).** For the hosted demo, one system covers
+  everything: **pgvector** (Postgres) for vectors via `PgVectorStore`, Postgres tables for chats +
+  document/chunk metadata via `PostgresRecordStore`, and **Supabase Storage** for the raw original
+  docs via `SupabaseBlobStore`. Free tier: 500 MB Postgres + 1 GB file storage. Most stable,
+  fewest moving parts, open-source core (Postgres/pgvector). Env: `DATABASE_URL`, `SUPABASE_URL`,
+  `SUPABASE_KEY`. `QdrantVectorStore` (Qdrant Cloud free) remains an alternative dedicated vector
+  backend if vector scale/perf demands it. **Local dev always uses SQLite + FAISS + filesystem.**
+- **Regular record DB (`rag/store/`).** A `RecordStore` (chats/messages, documents, chunk metadata)
+  + `BlobStore` (raw original files) behind ABCs: `SqliteRecordStore` + `LocalBlobStore` locally,
+  `PostgresRecordStore` + `SupabaseBlobStore` hosted. `RAG_RECORD_STORE={sqlite,postgres}`,
+  `RAG_BLOB_STORE={local,supabase}`. The memory feature (#11) builds on the chat tables.
 - **Persistence model (solves ephemeral disk).** Index dir = `vectors.faiss` + `bm25.json` +
   `docstore.json(.gz)` + `graph.pkl` + `manifest.json` (embedder id, dim, chunker params, corpus
   hash, build time). **Boot logic:** `pull_index` from Hub → if present and manifest matches the
@@ -528,7 +546,7 @@ local = ["torch>=2.2", "accelerate>=0.33", "bitsandbytes>=0.43",
 
 Hosted vector DB + monitoring extras + notes:
 ```
-hosted     = ["qdrant-client>=1.10"]                         # free Qdrant Cloud
+hosted     = ["qdrant-client>=1.10", "psycopg[binary]>=3.1", "pgvector>=0.3", "supabase>=2.0"]  # Supabase Postgres+pgvector+Storage / Qdrant
 monitoring = ["prometheus-client>=0.20", "python-logging-loki>=0.3.1"]   # Grafana: Prometheus + Loki
 ```
 The Grafana/Prometheus/Loki **services** run via `infra/observability/docker-compose.yml` (Docker,
@@ -726,8 +744,8 @@ true mean average precision instead of ndcg` · `test: scaffold suite and lock m
   ensure the real embedder is shared into the dense leg (not silently fake).
 - [ ] `rag/vectorstore/` (`NumpyVectorStore`, `FaissVectorStore`, base ABC) + `hf_persistence.py`
   (push/pull to private HF Dataset; manifest validation).
-- [ ] `rag/vectorstore/qdrant_store.py` (`QdrantVectorStore`, free Qdrant Cloud; same ABC; env-configured)
-  — optional hosted backend; selectable via `RAG_VECTORSTORE={faiss,numpy,qdrant}`.
+- [ ] `rag/vectorstore/pgvector_store.py` (`PgVectorStore`, Supabase/Postgres pgvector; hosted default)
+  and `qdrant_store.py` (`QdrantVectorStore`, alt). Selectable via `RAG_VECTORSTORE={faiss,numpy,pgvector,qdrant}`.
 - [ ] BM25 `serialize()`/`load()` + tokenizer hook.
 **Files:** `rag/embeddings/*`, `rag/retrieval/{semantic,hybrid,reranker,bm25_retriever,dense_store_retriever}.py`,
 `rag/vectorstore/*`, tests.
@@ -744,6 +762,9 @@ sort key` · `feat(vectorstore): add faiss store with hub persistence`.
 - [ ] `rag/chunking/` (recursive default + token + semantic + parent-child); chunks feed the existing
   `index_documents` as `{chunk_id: text}` with metadata `{doc_id, parent_id, span}` (zero retriever change).
 - [ ] `rag/ingestion/pipeline.py` (load → chunk → embed → index → persist).
+- [ ] `rag/store/` record DB: `RecordStore` (documents, chunks, chats/messages) + `BlobStore` (raw
+  original files). `SqliteRecordStore` + `LocalBlobStore` locally; `PostgresRecordStore` +
+  `SupabaseBlobStore` hosted. Ingestion writes document + chunk records and stores the raw file.
 - [ ] `rag/retrieval/contextual.py` (`ContextualRetriever` index-time wrapper: LLM writes 1-2
   sentence chunk context → index `context + chunk` into BOTH dense and BM25; docstore keeps original
   for display; contexts cached in the persisted index).
