@@ -28,6 +28,8 @@ class RAGSettings(BaseSettings):
     )
 
     # Runtime knobs (RAG_* env vars).
+    # Weights always load in bf16/fp16 (full quality); never weight-quantize.
+    dtype: Literal["bfloat16", "float16"] = "bfloat16"
     quantization: Literal["none", "4bit", "8bit"] = "none"
     kv_quant: Literal["polarquant", "none"] = "polarquant"
     reranker_device: str = "cuda"

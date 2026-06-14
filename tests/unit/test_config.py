@@ -37,5 +37,9 @@ def test_hf_token_legacy_alias(monkeypatch):
     assert s.hf_token == "hf_legacy"
 
 
+def test_dtype_default_is_bf16():
+    assert RAGSettings(_env_file=None).dtype == "bfloat16"
+
+
 def test_get_settings_cached():
     assert get_settings() is get_settings()
