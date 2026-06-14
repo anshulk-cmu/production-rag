@@ -541,6 +541,13 @@ one-liners, no over-engineering. Comments are sparse and explain only *why* (non
 never restate *what* the code already says — prefer readable plain code over comments. This applies
 to every component and every commit.
 
+**RULE — verify the rigor of every feature as it is built.** For each component, explicitly check
+the **math** (formulas correct, e.g. BM25/RRF/NDCG/AP, normalization, polar transform), the
+**logic** (control flow, edge cases, off-by-one, fallbacks), the **code** (does what it claims;
+tests prove it), and **statistical significance** where claims are comparative (don't report
+"X beats Y" without enough samples / a significance check / confidence intervals; note n and
+variance). No feature is "done" until its correctness is demonstrated, not asserted.
+
 **Definition of Done (per component) — all required before moving on:**
 1. **Structure** — lives in its own module; implements its `Protocol`/ABC from `rag/interfaces`;
    exported via the package `__init__`; registered in `rag/config` where it's selectable; consistent
