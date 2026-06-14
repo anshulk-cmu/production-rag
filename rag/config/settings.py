@@ -46,10 +46,14 @@ class RAGSettings(BaseSettings):
     max_new_tokens: int = 512
     temperature: float = 0.0
 
-    # Logging.
+    # Logging + Grafana Cloud observability.
     log_level: str = "INFO"
     log_json: bool = False
     loki_url: str | None = None
+    loki_user: str | None = None
+    prom_url: str | None = None
+    prom_user: str | None = None
+    grafana_token: str | None = None
 
     @property
     def models(self) -> ModelSet:

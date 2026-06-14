@@ -41,5 +41,15 @@ def test_dtype_default_is_bf16():
     assert RAGSettings(_env_file=None).dtype == "bfloat16"
 
 
+def test_grafana_fields_default_none():
+    s = RAGSettings(_env_file=None)
+    assert s.loki_user is None and s.prom_url is None and s.grafana_token is None
+
+
+def test_prom_url_from_env(monkeypatch):
+    monkeypatch.setenv("RAG_PROM_URL", "https://x/api/prom/push")
+    assert RAGSettings(_env_file=None).prom_url == "https://x/api/prom/push"
+
+
 def test_get_settings_cached():
     assert get_settings() is get_settings()

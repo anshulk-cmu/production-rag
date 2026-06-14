@@ -64,12 +64,12 @@ graph = ["networkx>=3.3"]
 serve = ["gradio>=4.44", "spaces>=0.30"]
 eval = ["datasets>=2.20", "pandas>=2.2", "scikit-learn>=1.5"]
 gpu = ["accelerate>=0.33", "bitsandbytes>=0.43"]
-monitoring = ["python-logging-loki>=0.3.1", "nvidia-ml-py>=12.0"]
+monitoring = ["nvidia-ml-py>=12.0"]  # GPU util; Loki log shipping uses stdlib, Prometheus is core
 local = [
     "torch>=2.2", "accelerate>=0.33", "bitsandbytes>=0.43",
     "sentence-transformers>=3.0", "FlagEmbedding>=1.2", "faiss-cpu>=1.8",
     "transformers>=4.44", "networkx>=3.3", "huggingface_hub>=0.24",
-    "python-logging-loki>=0.3.1", "nvidia-ml-py>=12.0",
+    "nvidia-ml-py>=12.0",
 ]
 all = [
     "sentence-transformers>=3.0", "FlagEmbedding>=1.2", "faiss-cpu>=1.8",
@@ -77,7 +77,7 @@ all = [
     "huggingface_hub>=0.24", "pypdf>=4.2", "beautifulsoup4>=4.12",
     "networkx>=3.3", "gradio>=4.44", "spaces>=0.30", "datasets>=2.20",
     "pandas>=2.2", "scikit-learn>=1.5", "prometheus-client>=0.20",
-    "python-logging-loki>=0.3.1",
+    "nvidia-ml-py>=12.0",
 ]
 
 [tool.setuptools.packages.find]

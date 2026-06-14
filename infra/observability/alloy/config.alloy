@@ -1,0 +1,19 @@
+// Grafana Alloy: scrape the app's Prometheus /metrics and remote_write to Grafana Cloud.
+// Run:  alloy run infra/observability/alloy/config.alloy
+// Requires env vars (export from .env): RAG_PROM_URL, RAG_PROM_USER, RAG_GRAFANA_TOKEN.
+
+prometheus.scrape "rag" {
+  targets         = [{ __address__ = "localhost:9100" }]
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.grafanacloud.receiver]
+}
+
+prometheus.remote_write "grafanacloud" {
+  endpoint {
+    url = sys.env("RAG_PROM_URL")
+    basic_auth {
+      username = sys.env("RAG_PROM_USER")
+      password = sys.env("RAG_GRAFANA_TOKEN")
+    }
+  }
+}

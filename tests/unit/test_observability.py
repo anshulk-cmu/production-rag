@@ -54,13 +54,18 @@ def test_get_logger_is_logger():
     assert isinstance(get_logger("rag.test"), logging.Logger)
 
 
-def test_configure_logging_idempotent():
+def test_configure_logging_idempotent(monkeypatch):
     import rag.observability.logging as log_mod
+    from rag.config.settings import get_settings
 
+    # Disable Loki so the test adds no network handler and stays at one handler.
+    monkeypatch.setenv("RAG_LOKI_URL", "")
+    get_settings.cache_clear()
     log_mod._CONFIGURED = False
     logging.getLogger("rag").handlers.clear()
     configure_logging(level="INFO")
     n1 = len(logging.getLogger("rag").handlers)
     configure_logging(level="DEBUG")
     n2 = len(logging.getLogger("rag").handlers)
+    get_settings.cache_clear()
     assert n1 == 1 and n2 == 1

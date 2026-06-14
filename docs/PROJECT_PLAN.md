@@ -712,9 +712,10 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
 - [ ] `rag/interfaces/protocols.py` (all Protocols, `@runtime_checkable`).
 - [ ] **`rag/observability/`** (logging + Prometheus metrics + Loki log shipping + watch) — built
   first so every later component logs/instruments through it; unit-tested; wired into `get_stats()`.
-- [ ] **`infra/observability/`** Grafana stack: `docker-compose.yml` (Prometheus + Loki + Grafana +
-  Alloy/Promtail) with provisioned datasources + dashboards; `make observability-up`. Verify the
-  app's `/metrics` is scraped and logs appear in Grafana before building further components.
+- [x] **`infra/observability/`** observability (DONE — Grafana Cloud chosen over local Docker): stdlib
+  non-blocking Loki handler in `logging.py` (logs verified shipping, HTTP 204), config fields, Alloy
+  `config.alloy` for metrics remote_write, starter dashboard JSON, README. Local docker-compose left
+  as an optional future offline alternative.
 - [x] Move `SimpleEmbedder` → `rag/embeddings/fake.py` `HashEmbedder` (alias kept; `embed_batch`
   added; SemanticRetriever takes an injected embedder). DONE (7 tests). Note: base.py RetrievalResult
   metadata still has a legacy implicit-Optional mypy issue, deferred to the M1 base refactor.
@@ -937,7 +938,7 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 **Foundations (M0)**
 - [x] `rag/config/` settings + model registry (local/cloud/zerogpu/cpu/fake profiles). DONE (7 tests).
 - [x] `rag/observability/` logging + Prometheus metrics + Loki logs + watch (built first; all use it). DONE (8 tests).
-- [ ] `infra/observability/` Grafana stack (docker-compose: Prometheus+Loki+Grafana) + dashboards.
+- [x] Observability wired to Grafana Cloud: Loki log handler (verified) + Alloy metrics config + dashboard. DONE. (local docker stack = optional, later.)
 - [x] `requirements.txt` + `pyproject` extras + `requires-python>=3.10` + auto-discover subpackages. DONE.
 - [x] `rag/interfaces/protocols.py` (all Protocols + shared dataclasses). DONE (9 tests).
 - [x] Move `SimpleEmbedder` → `HashEmbedder` (alias kept) + inject into SemanticRetriever. DONE (7 tests).
