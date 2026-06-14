@@ -83,7 +83,7 @@ include = ["rag*", "evaluation*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py310', 'py311', 'py312']
+target-version = ['py310', 'py311']
 
 [tool.ruff]
 line-length = 100
