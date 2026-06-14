@@ -627,8 +627,12 @@ verified**; the actual create/upload round-trip runs in M7 (not earlier), since 
 **Tasks**
 - [x] **Local GPU environment setup** (DONE): **conda is the default env manager** (not venv/pip).
   Env `production-rag` (renamed from `hdai`) — Python 3.11.15, torch 2.10.0+cu128, CUDA 12.8
-  available, NVIDIA RTX 5070 Ti Laptop GPU (11.94 GB VRAM, cc 12.0). Remaining sub-step: quick load
-  test of bge-m3 + bge-reranker-v2-m3 + Llama-3.2-3B-Instruct (fp16 + PolarQuant) to confirm the VRAM budget.
+  available, NVIDIA RTX 5070 Ti Laptop GPU (11.94 GB VRAM, cc 12.0).
+- [x] **Model VRAM budget verified** (DONE, `scripts/gpu_budget.py`): full stack fits on the GPU in
+  bf16/fp16 — bge-m3 fp16 1.08 GB + bge-reranker-v2-m3 fp16 1.06 GB + Llama-3.2-3B bf16 5.98 GB =
+  **8.14 GB used / 11.94 GB, peak 8.12 GB, 3.80 GB headroom → FITS**. Nothing needs CPU offload;
+  `RAG_RERANKER_DEVICE=cpu` remains the fallback if VRAM ever tightens. Always bf16/fp16, no weight
+  quantization (`RAG_DTYPE=bfloat16`, `RAG_QUANTIZATION=none`); PolarQuant applies to the KV cache only.
 - [ ] Rename `.env` key `HF-Token` → `HF_TOKEN` (+ back-compat shim); add `.env.example`.
   (HF reachability + `write` scope already verified; full write round-trip deferred to M7.)
 - [ ] `rag/config/settings.py` (`RAGSettings` via pydantic-settings; `.env` load; `get_settings()`)
