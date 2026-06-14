@@ -15,6 +15,11 @@ A complete implementation of enterprise-grade RAG retrieval systems that:
 - ✅ Evaluate with industry-standard metrics
 - ✅ Compare retriever strategies systematically
 
+> **Status (June 2026):** actively being upgraded from a teaching skeleton into a production- and
+> research-grade system — real Hugging Face models, contextual retrieval, GraphRAG, query transforms,
+> grounded generation, agentic/corrective RAG, persistence memory, a comprehensive evaluation suite,
+> and Grafana observability. Full roadmap: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md).
+
 ## Architecture
 
 ### Core Components
@@ -429,6 +434,34 @@ Not implemented (but easy to add):
 - [Weaviate](https://weaviate.io/) - Vector search
 - [LiteLLM](https://github.com/BerriAI/litellm) - Unified LLM API
 - [LangChain](https://python.langchain.com/) - LLM orchestration
+
+## Development
+
+This project uses **conda** as the default environment manager.
+
+```bash
+conda activate production-rag      # Python 3.11, CUDA torch
+pip install -e ".[dev]"            # core + dev tools
+pytest -q                          # run the test suite
+```
+
+Optional dependency groups: `embeddings, vectorstore, hosted, llm, loaders, graph, serve, eval,
+gpu, monitoring, local, all` (e.g. `pip install -e ".[local]"` for the full GPU stack).
+
+## Configuration
+
+Settings load from environment variables and a local `.env` (see [.env.example](.env.example)).
+Switching environments is one switch — `RAG_PROFILE`:
+
+| Profile | Use | Embedder | Reranker | LLM |
+|---------|-----|----------|----------|-----|
+| `local` | 12GB GPU dev (default) | bge-m3 | bge-reranker-v2-m3 | Llama-3.2-3B-Instruct |
+| `cloud` | AWS EC2 24/48GB | bge-m3 | bge-reranker-v2-m3 | Llama-3.1-8B-Instruct |
+| `zerogpu` | HF Space (GPU) | bge-m3 | bge-reranker-v2-m3 | Llama-3.2-3B-Instruct |
+| `cpu` | HF Space (free CPU) | bge-small-en-v1.5 | MiniLM | Qwen2.5-1.5B-Instruct |
+| `fake` | tests / CI | built-in fakes | built-in fakes | echo |
+
+`HF_TOKEN` (write scope) is read from `.env`; the legacy `HF-Token` spelling is also accepted.
 
 ## Author
 

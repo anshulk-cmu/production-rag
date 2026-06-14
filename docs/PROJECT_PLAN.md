@@ -827,10 +827,10 @@ evaluation` · `docs: publish model card and results` · `chore: release v2.0.0`
 - [ ] Rename `.env` key → `HF_TOKEN` (+ shim); add `.env.example`. (HF write scope already verified.)
 
 **Foundations (M0)**
-- [ ] `rag/config/` settings + model registry (local/cloud/zerogpu/cpu/fake profiles).
+- [x] `rag/config/` settings + model registry (local/cloud/zerogpu/cpu/fake profiles). DONE (7 tests).
 - [ ] `rag/observability/` logging + Prometheus metrics + Loki logs + watch (built first; all use it).
 - [ ] `infra/observability/` Grafana stack (docker-compose: Prometheus+Loki+Grafana) + dashboards.
-- [ ] `requirements.txt` + `pyproject` extras + `requires-python>=3.10` + register subpackages.
+- [x] `requirements.txt` + `pyproject` extras + `requires-python>=3.10` + auto-discover subpackages. DONE.
 - [ ] `rag/interfaces/protocols.py`.
 - [ ] Move `SimpleEmbedder` → `HashEmbedder` (alias kept).
 - [ ] Fix MAP bug + AP helper + regression test; `Strategy` enum stub; timing scaffold.
