@@ -2,13 +2,13 @@
 and decide what must go on CPU RAM to fit. Run: python scripts/gpu_budget.py
 """
 
-import gc
 import time
 
 import torch
 from huggingface_hub import login
 
 from rag.config import get_settings
+from rag.utils.device import free_gpu
 
 EMB_ID = "BAAI/bge-m3"
 RR_ID = "BAAI/bge-reranker-v2-m3"
@@ -61,8 +61,7 @@ def smoke(llm, tok) -> float:
 
 
 def trial(reranker_device: str) -> float:
-    gc.collect()
-    torch.cuda.empty_cache()
+    free_gpu()
     torch.cuda.reset_peak_memory_stats()
     print(f"\n=== Trial: reranker on {reranker_device.upper()} (embedder+LLM on GPU) ===")
     r0 = reserved()
