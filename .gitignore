@@ -142,3 +142,4 @@ models/
 data/
 *.pkl
 *.pickle
+.env
