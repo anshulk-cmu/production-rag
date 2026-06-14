@@ -612,6 +612,10 @@ wire into config/pipeline → integration/smoke → one conventional commit`. Th
 **Per-component commit granularity:** each finished component is its own conventional commit (no AI
 attribution, no Co-Authored-By), so history reads as a clean component-by-component build.
 
+**RULE — simple, minimal commits.** Keep commit messages short: a concise conventional-commit
+subject line, with little or no body. State what changed in a few words; do not write long
+multi-paragraph commit bodies.
+
 ## Milestones, tasks, files, acceptance, commits
 
 Conventional commits, **no AI attribution, no Co-Authored-By trailer**. Work on a branch per
