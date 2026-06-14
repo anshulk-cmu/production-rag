@@ -9,6 +9,7 @@ from .metrics import compute_metrics, MetricResult
 @dataclass
 class EvaluationResult:
     """Results for evaluating a single retriever"""
+
     retriever_name: str
     num_queries: int
     avg_metrics: Dict[str, float]
@@ -39,7 +40,7 @@ class Evaluator:
         retriever,
         test_queries: List[Tuple[str, Set[str]]],
         k_values: List[int] = None,
-        verbose: bool = True
+        verbose: bool = True,
     ) -> EvaluationResult:
         """
         Evaluate retriever on test queries.
@@ -72,12 +73,14 @@ class Evaluator:
             metrics_list.append(metrics)
 
             # Store per-query results
-            per_query_results.append({
-                "query": query,
-                "retrieved": retrieved_ids[:10],
-                "relevant": list(relevant_ids),
-                "metrics": metrics.to_dict()
-            })
+            per_query_results.append(
+                {
+                    "query": query,
+                    "retrieved": retrieved_ids[:10],
+                    "relevant": list(relevant_ids),
+                    "metrics": metrics.to_dict(),
+                }
+            )
 
         # Average metrics across queries
         avg_metrics = self._average_metrics(metrics_list, k_values)
@@ -86,7 +89,7 @@ class Evaluator:
             retriever_name=retriever.name,
             num_queries=len(test_queries),
             avg_metrics=avg_metrics,
-            per_query_metrics=per_query_results
+            per_query_metrics=per_query_results,
         )
 
         if verbose:
@@ -95,10 +98,7 @@ class Evaluator:
         return result
 
     def compare(
-        self,
-        retrievers: List,
-        test_queries: List[Tuple[str, Set[str]]],
-        k_values: List[int] = None
+        self, retrievers: List, test_queries: List[Tuple[str, Set[str]]], k_values: List[int] = None
     ) -> Dict[str, EvaluationResult]:
         """
         Compare multiple retrievers.
@@ -179,7 +179,7 @@ class Evaluator:
                 "per_query_metrics": result.per_query_metrics[:3],  # Store first 3 for brevity
             }
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(data, f, indent=2)
 
         print(f"Results saved to {filepath}")

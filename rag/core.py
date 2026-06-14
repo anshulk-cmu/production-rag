@@ -112,12 +112,7 @@ class RAGPipeline:
 
         return results_list
 
-    def batch_query(
-        self,
-        queries: List[str],
-        k: int = 10,
-        **kwargs
-    ) -> List[List[RetrievalResult]]:
+    def batch_query(self, queries: List[str], k: int = 10, **kwargs) -> List[List[RetrievalResult]]:
         """
         Process multiple queries.
 
@@ -140,11 +135,7 @@ class RAGPipeline:
 
         return results
 
-    def format_results(
-        self,
-        results: List[RetrievalResult],
-        include_metadata: bool = False
-    ) -> str:
+    def format_results(self, results: List[RetrievalResult], include_metadata: bool = False) -> str:
         """Format results for display"""
         output = []
 

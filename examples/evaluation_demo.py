@@ -92,7 +92,7 @@ def main():
     print("EVALUATION FRAMEWORK - Retriever Comparison")
     print("="*70)
 
-    print(f"\nDataset:")
+    print("\nDataset:")
     print(f"  Documents: {len(DOCUMENTS)}")
     print(f"  Test queries: {len(TEST_QUERIES)}")
 
@@ -125,7 +125,7 @@ def main():
     for name, result in results.items():
         print(f"\n{name}:")
         print(f"  Number of queries: {result.num_queries}")
-        print(f"  Average Metrics:")
+        print("  Average Metrics:")
         for metric, value in result.avg_metrics.items():
             print(f"    {metric}: {value:.3f}")
 
@@ -161,13 +161,13 @@ def main():
         semantic_ndcg = semantic_result.avg_metrics.get("ndcg_at_10", 0) if semantic_result else 0
         bm25_ndcg = bm25_result.avg_metrics.get("ndcg_at_10", 0) if bm25_result else 0
 
-        print(f"\n✓ Hybrid Retriever combines semantic + lexical search")
+        print("\n✓ Hybrid Retriever combines semantic + lexical search")
         print(f"  NDCG@10: {hybrid_ndcg:.3f}")
 
         if hybrid_ndcg > max(semantic_ndcg, bm25_ndcg):
-            print(f"  → Outperforms individual strategies")
+            print("  → Outperforms individual strategies")
         else:
-            print(f"  → Consider adjusting weights or strategies")
+            print("  → Consider adjusting weights or strategies")
 
     print("\n" + "="*70)
     print("KEY OBSERVATIONS")

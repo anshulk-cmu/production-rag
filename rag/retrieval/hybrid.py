@@ -1,6 +1,6 @@
 """Hybrid retrieval combining semantic and lexical search"""
 
-from typing import List, Dict
+from typing import List
 from .base import BaseRetriever, RetrievalResult
 from .semantic import SemanticRetriever
 from .bm25_retriever import BM25Retriever
@@ -65,7 +65,7 @@ class HybridRetriever(BaseRetriever):
                     "metadata": result.metadata,
                     "semantic_score": result.score,
                     "bm25_score": 0.0,
-                    "rrf_score": 0.0
+                    "rrf_score": 0.0,
                 }
             fused_scores[result.document_id]["rrf_score"] += self.semantic_weight * rrf_score
             fused_scores[result.document_id]["semantic_rank"] = rank
@@ -79,38 +79,37 @@ class HybridRetriever(BaseRetriever):
                     "metadata": result.metadata,
                     "semantic_score": 0.0,
                     "bm25_score": result.score,
-                    "rrf_score": 0.0
+                    "rrf_score": 0.0,
                 }
             fused_scores[result.document_id]["rrf_score"] += self.bm25_weight * rrf_score
             fused_scores[result.document_id]["bm25_rank"] = rank
 
         # Sort by fused RRF score
-        sorted_results = sorted(
-            fused_scores.items(),
-            key=lambda x: x[1]["rrf_score"],
-            reverse=True
-        )
+        sorted_results = sorted(fused_scores.items(), key=lambda x: x[1]["rrf_score"], reverse=True)
 
-        # Create result objects
+        # Create result objects. The stored score IS the RRF score used for ranking, so it is
+        # monotonic with the displayed order; raw per-retriever scores go in metadata.
         results = []
         for doc_id, scores in sorted_results[:k]:
-            # Combined score as weighted average
-            combined_score = (
-                self.semantic_weight * scores["semantic_score"] +
-                self.bm25_weight * scores["bm25_score"]
+            metadata = dict(scores["metadata"] or {})
+            metadata.update(
+                semantic_score=scores["semantic_score"], bm25_score=scores["bm25_score"]
             )
-
-            results.append(RetrievalResult(
-                document_id=doc_id,
-                content=scores["content"],
-                score=combined_score,
-                metadata=scores["metadata"]
-            ))
+            results.append(
+                RetrievalResult(
+                    document_id=doc_id,
+                    content=scores["content"],
+                    score=scores["rrf_score"],
+                    metadata=metadata,
+                )
+            )
 
         return results
 
     def set_weights(self, semantic: float = 0.5, bm25: float = 0.5):
-        """Adjust retrieval weights dynamically"""
+        """Adjust retrieval weights dynamically (normalized to sum to 1)."""
         total = semantic + bm25
+        if total <= 0:
+            raise ValueError("weights must sum to a positive value")
         self.semantic_weight = semantic / total
         self.bm25_weight = bm25 / total

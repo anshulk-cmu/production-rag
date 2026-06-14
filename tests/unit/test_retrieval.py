@@ -1,5 +1,7 @@
+from rag.interfaces import Reranker
 from rag.retrieval import BM25Retriever, CrossEncoderReranker, HybridRetriever
 from rag.retrieval.base import RetrievalResult
+from rag.retrieval.reranker import SimpleRerankerModel
 
 
 def test_retrieval_result_repr():
@@ -73,3 +75,20 @@ def test_rerank_empty_and_top_k():
     assert rr.rerank("q", []) == []
     cands = [RetrievalResult(f"d{i}", "machine learning text", 0.1) for i in range(5)]
     assert len(rr.rerank("machine learning", cands, k=2)) == 2
+
+
+def test_reranker_model_satisfies_protocol():
+    assert isinstance(SimpleRerankerModel(), Reranker)
+
+
+def test_reranker_score_batch():
+    out = SimpleRerankerModel().score_batch("machine learning", ["machine learning text", "x"])
+    assert len(out) == 2 and all(isinstance(v, float) for v in out)
+
+
+def test_hybrid_score_is_monotonic_with_rank(corpus):
+    r = HybridRetriever()
+    r.index_documents(corpus)
+    res = r.retrieve("term frequency ranking", k=4)
+    scores = [x.score for x in res]
+    assert scores == sorted(scores, reverse=True)  # stored score == RRF rank order

@@ -33,7 +33,7 @@ class RAGSettings(BaseSettings):
     quantization: Literal["none", "4bit", "8bit"] = "none"
     kv_quant: Literal["polarquant", "none"] = "polarquant"
     reranker_device: str = "cuda"
-    vectorstore: Literal["faiss", "numpy", "qdrant"] = "faiss"
+    vectorstore: Literal["faiss", "numpy", "pgvector", "qdrant"] = "faiss"
     memory: Literal["off", "conversation", "semantic", "full"] = "full"
 
     # Retrieval / generation hyperparameters.

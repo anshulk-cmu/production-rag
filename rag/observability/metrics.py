@@ -40,6 +40,10 @@ GPU_UTIL = Gauge("rag_gpu_utilization_percent", "GPU utilization", ["device"])
 RAM_USED = Gauge("rag_ram_used_bytes", "Process resident memory")
 CPU_PERCENT = Gauge("rag_cpu_percent", "Process CPU percent")
 
+# Cached process handle, primed so the first cpu_percent() is a real delta, not 0.0.
+_PROC = psutil.Process()
+_PROC.cpu_percent()
+
 
 @contextmanager
 def timer(stage: str):
@@ -91,9 +95,8 @@ def set_quality(metric: str, value: float) -> None:
 
 def sample_system() -> None:
     """Sample process RAM/CPU and, when available, GPU memory and utilization."""
-    proc = psutil.Process()
-    RAM_USED.set(proc.memory_info().rss)
-    CPU_PERCENT.set(proc.cpu_percent())
+    RAM_USED.set(_PROC.memory_info().rss)
+    CPU_PERCENT.set(_PROC.cpu_percent())
     if torch is not None and torch.cuda.is_available():
         for i in range(torch.cuda.device_count()):
             GPU_MEM_ALLOCATED.labels(device=str(i)).set(torch.cuda.memory_allocated(i))

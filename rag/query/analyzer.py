@@ -1,6 +1,6 @@
 """Query analysis and preprocessing"""
 
-from typing import Dict, List
+from typing import List
 from dataclasses import dataclass
 import re
 
@@ -8,6 +8,7 @@ import re
 @dataclass
 class QueryAnalysis:
     """Result of query analysis"""
+
     original: str
     cleaned: str
     intent: str
@@ -22,7 +23,7 @@ class QueryAnalyzer:
 
     def __init__(self):
         self.entity_patterns = {
-            "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+            "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
             "url": r"https?://[^\s]+",
             "number": r"\b\d+(?:,\d{3})*(?:\.\d+)?\b",
             "date": r"\b(?:\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})\b",
@@ -57,7 +58,7 @@ class QueryAnalyzer:
             keywords=keywords,
             entities=entities,
             length=len(cleaned.split()),
-            is_question=is_question
+            is_question=is_question,
         )
 
         return analysis
@@ -65,10 +66,10 @@ class QueryAnalyzer:
     def _clean_text(self, text: str) -> str:
         """Basic text cleaning"""
         # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text).strip()
+        text = re.sub(r"\s+", " ", text).strip()
 
         # Remove punctuation except important markers
-        text = re.sub(r'[^\w\s\-\?]', '', text)
+        text = re.sub(r"[^\w\s\-\?]", "", text)
 
         # Convert to lowercase
         text = text.lower()
@@ -79,7 +80,7 @@ class QueryAnalyzer:
         """Extract important keywords"""
         # Simple approach: words longer than 3 chars
         tokens = text.split()
-        keywords = [t for t in tokens if len(t) > 3 and not t.startswith('-')]
+        keywords = [t for t in tokens if len(t) > 3 and not t.startswith("-")]
         return list(set(keywords))[:10]
 
     def _extract_entities(self, text: str) -> List[str]:
@@ -91,7 +92,7 @@ class QueryAnalyzer:
             entities.extend(matches)
 
         # Also extract capitalized sequences (proper nouns)
-        capitalized = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', text)
+        capitalized = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", text)
         entities.extend(capitalized)
 
         return list(set(entities))

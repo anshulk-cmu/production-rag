@@ -1,6 +1,6 @@
 """Query optimization techniques"""
 
-from typing import List, Set
+from typing import List
 import re
 
 
@@ -16,12 +16,52 @@ class QueryOptimizer:
 
     def __init__(self):
         self.stop_words = {
-            "a", "an", "and", "are", "as", "at", "be", "but", "by",
-            "for", "from", "had", "has", "have", "he", "her", "hers",
-            "him", "his", "how", "i", "if", "in", "is", "it", "its",
-            "me", "my", "of", "on", "or", "she", "so", "than", "that",
-            "the", "to", "too", "was", "what", "which", "who", "will",
-            "with", "you", "your"
+            "a",
+            "an",
+            "and",
+            "are",
+            "as",
+            "at",
+            "be",
+            "but",
+            "by",
+            "for",
+            "from",
+            "had",
+            "has",
+            "have",
+            "he",
+            "her",
+            "hers",
+            "him",
+            "his",
+            "how",
+            "i",
+            "if",
+            "in",
+            "is",
+            "it",
+            "its",
+            "me",
+            "my",
+            "of",
+            "on",
+            "or",
+            "she",
+            "so",
+            "than",
+            "that",
+            "the",
+            "to",
+            "too",
+            "was",
+            "what",
+            "which",
+            "who",
+            "will",
+            "with",
+            "you",
+            "your",
         }
 
         # Simple synonym mapping
@@ -71,20 +111,10 @@ class QueryOptimizer:
 
         Simple heuristics to improve search quality.
         """
-        # Remove extra spaces
-        query = re.sub(r'\s+', ' ', query).strip()
-
-        # Convert to lowercase for consistency
-        query_lower = query.lower()
-
-        # Add implicit wildcards for better matching
-        # "machine learning" -> search for variations
-        tokens = query_lower.split()
-
-        # Handle question marks
+        # Normalize whitespace and drop a trailing question mark.
+        query = re.sub(r"\s+", " ", query).strip()
         if query.endswith("?"):
             query = query.rstrip("?").strip()
-
         return query
 
     def detect_intent(self, query: str) -> str:

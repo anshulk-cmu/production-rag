@@ -1,13 +1,14 @@
 """Base retriever interface"""
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 from dataclasses import dataclass
 
 
 @dataclass
 class RetrievalResult:
     """Single retrieval result"""
+
     document_id: str
     content: str
     score: float
@@ -27,7 +28,7 @@ class BaseRetriever(ABC):
     def __init__(self, name: str = None):
         self.name = name or self.__class__.__name__
         self.documents = {}  # {doc_id: content}
-        self.metadata = {}   # {doc_id: metadata}
+        self.metadata = {}  # {doc_id: metadata}
 
     @abstractmethod
     def retrieve(self, query: str, k: int = 10) -> List[RetrievalResult]:

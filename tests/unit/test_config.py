@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from rag.config import MODEL_REGISTRY, RAGSettings, get_settings
 
 
@@ -49,6 +52,22 @@ def test_grafana_fields_default_none():
 def test_prom_url_from_env(monkeypatch):
     monkeypatch.setenv("RAG_PROM_URL", "https://x/api/prom/push")
     assert RAGSettings(_env_file=None).prom_url == "https://x/api/prom/push"
+
+
+def test_invalid_profile_rejected():
+    with pytest.raises(ValidationError):
+        RAGSettings(profile="bogus", _env_file=None)
+
+
+def test_invalid_dtype_rejected():
+    with pytest.raises(ValidationError):
+        RAGSettings(dtype="int8", _env_file=None)
+
+
+def test_hyperparameter_defaults():
+    s = RAGSettings(_env_file=None)
+    assert s.chunk_size == 512 and s.top_k == 10 and s.rerank_k == 5
+    assert s.vectorstore == "faiss" and s.memory == "full"
 
 
 def test_get_settings_cached():

@@ -1,7 +1,6 @@
 """Cross-encoder reranking for improving retrieval quality"""
 
-from typing import List, Dict
-import numpy as np
+from typing import List
 from .base import RetrievalResult
 
 
@@ -52,6 +51,10 @@ class SimpleRerankerModel:
         self.cache[cache_key] = score
         return score
 
+    def score_batch(self, query: str, documents: List[str]) -> List[float]:
+        """Score many documents for one query (satisfies the Reranker protocol)."""
+        return [self.score(query, doc) for doc in documents]
+
 
 class CrossEncoderReranker:
     """
@@ -64,7 +67,9 @@ class CrossEncoderReranker:
     def __init__(self):
         self.model = SimpleRerankerModel()
 
-    def rerank(self, query: str, candidates: List[RetrievalResult], k: int = None) -> List[RetrievalResult]:
+    def rerank(
+        self, query: str, candidates: List[RetrievalResult], k: int = None
+    ) -> List[RetrievalResult]:
         """
         Rerank candidates using cross-encoder model.
 
@@ -99,8 +104,8 @@ class CrossEncoderReranker:
                 metadata={
                     **(result.metadata or {}),
                     "original_score": result.score,
-                    "reranker_score": relevance
-                }
+                    "reranker_score": relevance,
+                },
             )
             reranked.append(reranked_result)
 
@@ -108,10 +113,7 @@ class CrossEncoderReranker:
         return reranked[:k] if k else reranked
 
     def batch_rerank(
-        self,
-        query: str,
-        candidates_per_step: List[List[RetrievalResult]],
-        k: int = 5
+        self, query: str, candidates_per_step: List[List[RetrievalResult]], k: int = 5
     ) -> List[RetrievalResult]:
         """
         Multi-stage reranking with progressive filtering.

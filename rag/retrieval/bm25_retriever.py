@@ -1,6 +1,6 @@
 """BM25 retrieval using lexical matching"""
 
-from typing import List, Dict, Set
+from typing import List
 from collections import defaultdict
 import math
 from .base import BaseRetriever, RetrievalResult
@@ -17,7 +17,7 @@ class BM25Retriever(BaseRetriever):
     def __init__(self, k1: float = 1.5, b: float = 0.75):
         super().__init__(name="BM25Retriever")
         self.k1 = k1  # Term frequency saturation parameter
-        self.b = b    # Length normalization parameter
+        self.b = b  # Length normalization parameter
 
         # Index structures
         self.vocabulary = set()  # All unique terms
@@ -121,11 +121,13 @@ class BM25Retriever(BaseRetriever):
         # Create results
         results = []
         for doc_id, score in scores[:k]:
-            results.append(RetrievalResult(
-                document_id=doc_id,
-                content=self.documents[doc_id],
-                score=float(score),
-                metadata=self.metadata.get(doc_id)
-            ))
+            results.append(
+                RetrievalResult(
+                    document_id=doc_id,
+                    content=self.documents[doc_id],
+                    score=float(score),
+                    metadata=self.metadata.get(doc_id),
+                )
+            )
 
         return results
