@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "production-rag"
+version = "1.0.0"
+description = "Production-quality RAG system with multi-strategy retrieval and evaluation framework"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Anshul Kumar", email = "anshulk@andrew.cmu.edu"},
+]
+maintainers = [
+    {name = "Anshul Kumar", email = "anshulk@andrew.cmu.edu"},
+]
+
+keywords = [
+    "rag",
+    "retrieval",
+    "augmented",
+    "generation",
+    "semantic",
+    "bm25",
+    "evaluation",
+    "ir",
+    "information-retrieval"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/anshulk-cmu/production-rag"
+Repository = "https://github.com/anshulk-cmu/production-rag"
+Issues = "https://github.com/anshulk-cmu/production-rag/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "mypy>=1.0",
+]
+
+[tool.setuptools]
+packages = ["rag", "rag.retrieval", "rag.query", "evaluation"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "--cov=rag --cov=evaluation"
